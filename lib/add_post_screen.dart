@@ -86,8 +86,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       // 1. Upload files
       List<String> uploadedFileIds = [];
       for (final file in _selectedFiles) {
-        final uploadedFile =
-            await _appwriteService.uploadFile(io.File(file.path!));
+        final uploadedFile = await _appwriteService.uploadFile(
+            file: io.File(file.path!));
         uploadedFileIds.add(uploadedFile.$id);
       }
 

@@ -1,4 +1,3 @@
-
 import 'dart:io' as io;
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
@@ -41,7 +40,42 @@ class AppwriteService {
     }).toList();
   }
 
-  Future<File> uploadFile(io.File file) async {
+  Future<DocumentList> getImages({String? cursor}) async {
+    // ignore: deprecated_member_use
+    return await _db.listDocuments(
+      databaseId: '691963ed003c37eb797f',
+      collectionId: 'image',
+      queries: [
+        Query.limit(10),
+        if (cursor != null) Query.cursorAfter(cursor),
+      ],
+    );
+  }
+
+  Future<Document> uploadImage({required io.File image}) async {
+    final file = await _storage.createFile(
+        bucketId: 'lens-s',
+        fileId: ID.unique(),
+        file: InputFile.fromPath(path: image.path));
+
+    final imageUrl =
+        'https://sgp.cloud.appwrite.io/v1/storage/buckets/lens-s/files/${file.$id}/view?project=691948bf001eb3eccd77';
+
+    // ignore: deprecated_member_use
+    return await _db.createDocument(
+      databaseId: '691963ed003c37eb797f',
+      collectionId: 'image',
+      documentId: ID.unique(),
+      data: {
+        'title': 'New Image',
+        'description': 'A beautiful new image',
+        'imageUrl': imageUrl,
+        'link': 'https://example.com',
+      },
+    );
+  }
+
+  Future<File> uploadFile({required io.File file}) async {
     final result = await _storage.createFile(
       bucketId: "lens-s",
       fileId: ID.unique(),

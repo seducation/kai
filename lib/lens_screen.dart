@@ -1,10 +1,13 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io' as io;
+
 import 'package:appwrite/appwrite.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:appwrite/models.dart' hide Row;
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/webview_screen.dart';
 
 class LensScreen extends StatefulWidget {
@@ -15,16 +18,7 @@ class LensScreen extends StatefulWidget {
 }
 
 class _LensScreenState extends State<LensScreen> {
-  // Replace with your Appwrite project ID and endpoint
-  final String appwriteEndpoint = 'https://sgp.cloud.appwrite.io/v1';
-  final String appwriteProjectId = '691948bf001eb3eccd77';
-  final String appwriteDatabaseId = '691963ed003c37eb797f';
-  final String appwriteCollectionId = 'image'; // Using 'image' collection
-  final String appwriteBucketId = 'lens-s';
-
-  late Client client;
-  late Databases databases;
-  late Storage storage;
+  final AppwriteService _appwriteService = AppwriteService();
   final List<Document> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -37,13 +31,6 @@ class _LensScreenState extends State<LensScreen> {
   @override
   void initState() {
     super.initState();
-    client = Client();
-    client
-        .setEndpoint(appwriteEndpoint)
-        .setProject(appwriteProjectId);
-
-    databases = Databases(client);
-    storage = Storage(client);
     _fetchData();
 
     _scrollController.addListener(() {
@@ -69,15 +56,7 @@ class _LensScreenState extends State<LensScreen> {
     });
 
     try {
-      List<String> queries = [Query.limit(10)];
-      if (_lastDocumentId != null) {
-        queries.add(Query.cursorAfter(_lastDocumentId!));
-      }
-      final response = await databases.listDocuments(
-        databaseId: appwriteDatabaseId,
-        collectionId: appwriteCollectionId,
-        queries: queries,
-      );
+      final response = await _appwriteService.getImages(cursor: _lastDocumentId);
 
       if (response.documents.isNotEmpty) {
         setState(() {
@@ -123,26 +102,7 @@ class _LensScreenState extends State<LensScreen> {
     });
 
     try {
-      final file = await storage.createFile(
-        bucketId: appwriteBucketId,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(path: image.path),
-      );
-
-      final imageUrl =
-          '$appwriteEndpoint/storage/buckets/$appwriteBucketId/files/${file.$id}/view?project=$appwriteProjectId';
-
-      await databases.createDocument(
-        databaseId: appwriteDatabaseId,
-        collectionId: appwriteCollectionId,
-        documentId: ID.unique(),
-        data: {
-          'title': 'New Image',
-          'description': 'A beautiful new image',
-          'imageUrl': imageUrl,
-          'link': 'https://example.com', // Example link
-        },
-      );
+      await _appwriteService.uploadImage(image: io.File(image.path));
 
       // Refresh data after upload
       await _refreshData();
