@@ -5,6 +5,7 @@ import 'package:my_app/find_account_page_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/sign_in.dart';
 import 'package:provider/provider.dart';
+import 'package:appwrite/models.dart' as models;
 
 class SelectContactScreen extends StatefulWidget {
   const SelectContactScreen({super.key, required this.onNewChat});
@@ -17,16 +18,53 @@ class SelectContactScreen extends StatefulWidget {
 
 class _SelectContactScreenState extends State<SelectContactScreen> {
   late final AppwriteService _appwriteService;
+  List<ChatModel> _contacts = [];
+  bool _isLoading = true;
+  models.User? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _appwriteService = context.read<AppwriteService>();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      _currentUser = await _appwriteService.getUser();
+      final profiles = await _appwriteService.getProfiles();
+      if (!mounted) return;
+
+      final contactList = profiles.documents
+          .where((doc) => doc.data['ownerId'] != _currentUser!.$id) // Exclude self
+          .map((doc) => ChatModel(
+                userId: doc.$id, // This is the PROFILE document ID
+                name: doc.data['name'] ?? 'No Name',
+                message: doc.data['status'] ?? 'No Status',
+                time: "",
+                imgPath: doc.data['profileImageUrl'] ?? "",
+              ))
+          .toList();
+
+      setState(() {
+        _contacts = contactList;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading contacts: $e")),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleContactTap(ChatModel contact) async {
     try {
-      await _appwriteService.getUser();
+      await _appwriteService.getUser(); // Ensure user is still logged in
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -43,6 +81,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      // If getUser fails, it means session expired
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const SignInScreen(),
@@ -54,46 +93,6 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final List<ChatModel> contacts = [
-      ChatModel(
-        userId: "691948bf001eb3eccd78",
-        name: "Baby (You)",
-        message: "Message yourself",
-        time: "",
-        imgPath: "https://picsum.photos/200/300",
-      ),
-      ChatModel(
-          userId: "691948bf001eb3eccd79",
-          name: "Alice",
-          message: "Busy",
-          time: "",
-          imgPath: "https://picsum.photos/200/300",
-          isOnline: true),
-      ChatModel(
-          userId: "691948bf001eb3eccd80",
-          name: "Alex Smith",
-          message: "At the gym",
-          time: "",
-          imgPath: "https://picsum.photos/200/300"),
-      ChatModel(
-          userId: "691948bf001eb3eccd81",
-          name: "Andrew",
-          message: "Urgent calls only",
-          time: "",
-          imgPath: "https://picsum.photos/200/300"),
-      ChatModel(
-          userId: "691948bf001eb3eccd82",
-          name: "Mom",
-          message: "Hey there! I am using WhatsApp.",
-          time: "",
-          imgPath: "https://picsum.photos/200/300"),
-      ChatModel(
-          userId: "691948bf001eb3eccd83",
-          name: "John Doe",
-          message: "Battery about to die",
-          time: "",
-          imgPath: "https://picsum.photos/200/300"),
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -105,14 +104,15 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text("Select contact"),
-            Text(
-              "256 contacts",
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.appBarTheme.titleTextStyle?.color?.withAlpha(179),
-                fontWeight: FontWeight.normal,
+            if (!_isLoading)
+              Text(
+                "${_contacts.length} contacts",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.appBarTheme.titleTextStyle?.color?.withAlpha(179),
+                  fontWeight: FontWeight.normal,
+                ),
               ),
-            ),
           ],
         ),
         actions: [
@@ -126,20 +126,22 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           ),
         ],
       ),
-      body: ListView(
-        children: [
-          const SizedBox(height: 10),
-          // Static Action Items
-          const ActionItem(
-            icon: Icons.group,
-            label: "New group",
-          ),
-          const ActionItem(
-            icon: Icons.person_add,
-            label: "New contact",
-            trailingIcon: Icons.qr_code,
-          ),
-          ActionItem(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              children: [
+                const SizedBox(height: 10),
+                // Static Action Items
+                const ActionItem(
+                  icon: Icons.group,
+                  label: "New group",
+                ),
+                const ActionItem(
+                  icon: Icons.person_add,
+                  label: "New contact",
+                  trailingIcon: Icons.qr_code,
+                ),
+                 ActionItem(
             icon: Icons.search,
             label: "Find",
             onTap: () {
@@ -179,26 +181,27 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
             },
           ),
 
-          // Section Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Text(
-              "Contacts on WhatsApp",
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
 
-          // Contact Items
-          ...contacts.map((contact) => ContactItem(
-                contact: contact,
-                onTap: () => _handleContactTap(contact),
-              )),
-        ],
-      ),
+                // Section Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Text(
+                    "Contacts on WhatsApp",
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+
+                // Contact Items
+                ..._contacts.map((contact) => ContactItem(
+                      contact: contact,
+                      onTap: () => _handleContactTap(contact),
+                    )),
+              ],
+            ),
     );
   }
 }
@@ -260,20 +263,20 @@ class ContactItem extends StatelessWidget {
       leading: CircleAvatar(
         radius: 22,
         backgroundColor: Colors.grey[300],
-        child: contact.imgPath.isNotEmpty
-            ? Image.network(
-                contact.imgPath,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.person),
-              )
-            : Text(
+        // Use a placeholder if the image path is empty
+        backgroundImage: (contact.imgPath.isNotEmpty && Uri.parse(contact.imgPath).isAbsolute) 
+            ? NetworkImage(contact.imgPath)
+            : null,
+        child: (contact.imgPath.isEmpty || !Uri.parse(contact.imgPath).isAbsolute)
+            ? Text(
                 contact.name.isNotEmpty ? contact.name[0] : "",
                 style: TextStyle(
                   color: Colors.grey[800],
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
-              ),
+              )
+            : null,
       ),
       title: Row(
         children: [
@@ -286,7 +289,7 @@ class ContactItem extends StatelessWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2.0),
         child: Text(
-          contact.message,
+          contact.message, // This should be 'status' from the profile
           style: theme.textTheme.bodySmall,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
