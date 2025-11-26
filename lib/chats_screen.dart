@@ -53,7 +53,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   void _addNewChat(ChatModel newChat) {
     setState(() {
-      _chatItems.insert(0, newChat);
+      final index = _chatItems.indexWhere((chat) => chat.userId == newChat.userId);
+      if (index != -1) {
+        _chatItems[index] = newChat;
+      } else {
+        _chatItems.insert(0, newChat);
+      }
     });
   }
 
@@ -65,13 +70,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
         appBar: AppBar(
           leading: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {},
+              Expanded(
+                child: IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {},
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {},
+              Expanded(
+                child: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {},
+                ),
               ),
             ],
           ),

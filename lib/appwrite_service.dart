@@ -176,7 +176,7 @@ class AppwriteService {
       databaseId: databaseId,
       tableId: profilesCollection,
       queries: [
-        Query.search('followers', userId),
+        Query.equal('followers', userId),
       ],
     );
   }
@@ -214,11 +214,18 @@ class AppwriteService {
     required String userId2,
   }) async {
     final chatId = _getChatId(userId1, userId2);
-    return await _db.listRows(
-      databaseId: databaseId,
-      tableId: messagesCollection,
-      queries: [Query.equal('chatId', chatId)],
-    );
+    try {
+      return await _db.listRows(
+        databaseId: databaseId,
+        tableId: messagesCollection,
+        queries: [Query.equal('chatId', chatId)],
+      );
+    } on AppwriteException catch (e) {
+      if (e.type == 'database_get_document_not_found' || e.code == 404) {
+        return models.RowList(total: 0, rows: []);
+      }
+      rethrow;
+    }
   }
 
   Future<List<PosterItem>> getMovies() async {

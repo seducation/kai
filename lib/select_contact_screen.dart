@@ -5,6 +5,7 @@ import 'package:my_app/find_account_page_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/sign_in.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 
 class SelectContactScreen extends StatefulWidget {
   const SelectContactScreen({super.key, required this.onNewChat});
@@ -27,7 +28,11 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     if (!_didInitialize) {
       _didInitialize = true;
       _appwriteService = context.read<AppwriteService>();
-      _loadFollowingContacts();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadFollowingContacts();
+        }
+      });
     }
   }
 
