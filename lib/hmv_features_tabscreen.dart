@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import './profile_page.dart';
 
 // ---------------------------------------------------------------------------
 // 1. DATA MODELS ( The "Base" Structure )
@@ -7,12 +8,14 @@ import 'package:flutter/material.dart';
 enum PostType { text, image, linkPreview, video }
 
 class User {
+  final String id;
   final String name;
   final String handle;
   final String avatarUrl;
   final bool isVerified;
 
   User({
+    required this.id,
     required this.name,
     required this.handle,
     required this.avatarUrl,
@@ -59,12 +62,14 @@ class Post {
 
 class MockData {
   static final User currentUser = User(
+    id: 'user_alex',
     name: "Alex Designer",
     handle: "@alex_ux",
     avatarUrl: "https://i.pravatar.cc/150?u=alex",
   );
 
   static final User techSource = User(
+    id: 'user_tech',
     name: "Android for PCs",
     handle: "@android_pc_mods",
     avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/d/db/Android_robot_2014.svg", // Placeholder
@@ -72,12 +77,14 @@ class MockData {
   );
 
   static final User gamingSource = User(
+    id: 'user_gaming',
     name: "Warzone Updates",
     handle: "@cod_warfare",
     avatarUrl: "https://i.pravatar.cc/150?u=gaming",
   );
 
    static final User animeSource = User(
+    id: 'user_anime',
     name: "Shonen Jump Daily",
     handle: "@shonen_leaks",
     avatarUrl: "https://i.pravatar.cc/150?u=anime",
@@ -103,7 +110,8 @@ class MockData {
         id: '2',
         author: gamingSource,
         timestamp: "2h",
-        contentText: "The new Free Ghost Skin is absolutely CRAZY! 🤯 Check out the details below.",
+        linkTitle: "The new Free Ghost Skin is absolutely CRAZY! 🤯",
+        contentText: "Check out the details below.",
         type: PostType.image,
         mediaUrl: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80", // Tactical gear image
         stats: PostStats(likes: 8500, comments: 230, shares: 1400, views: 654000),
@@ -170,51 +178,51 @@ class PostWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundImage: NetworkImage(post.author.avatarUrl),
-                  backgroundColor: Colors.grey[200],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.author.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        post.author.handle,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.more_horiz, color: Colors.grey[600], size: 18),
-              ],
-            ),
-          ),
+          _buildHeader(context),
 
-          // 2. Post Text (Optional)
-          if (post.contentText.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-              child: Text(
-                post.contentText,
-                style: const TextStyle(fontSize: 15, height: 1.3),
-              ),
-            ),
-
-          // 3. Media (Edge-to-Edge)
+          // 2. Content (Image or Link Preview for non-text posts)
           if (post.type == PostType.image)
             _buildImageContent(context),
           if (post.type == PostType.linkPreview)
             _buildLinkPreview(context),
+
+          // 3. Post Content (Title and Description)
+          GestureDetector(
+            onTap: () {
+              // Text-only posts don't have a separate detail page in this design
+              if (post.type != PostType.text) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DetailPage(post: post)),
+                );
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (post.linkTitle != null && post.linkTitle!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Text(
+                        post.linkTitle!,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  if (post.contentText.isNotEmpty)
+                    Text(
+                      post.contentText,
+                      style: const TextStyle(fontSize: 15, height: 1.3),
+                    ),
+                ],
+              ),
+            ),
+          ),
 
           // 4. Action Bar
           Padding(
@@ -224,14 +232,55 @@ class PostWidget extends StatelessWidget {
           
           // 5. Timestamp
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            padding: const EdgeInsets.only(left: 12.0, right: 12.0, bottom: 12.0),
             child: Text(
               post.timestamp,
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ),
-          const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final handleColor = Colors.grey[600];
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ProfilePageScreen(profileId: post.author.id)),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundImage: NetworkImage(post.author.avatarUrl),
+              backgroundColor: Colors.grey[200],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.author.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                  ),
+                  Text(
+                    post.author.handle,
+                    style: TextStyle(color: handleColor, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.more_horiz, color: handleColor, size: 22),
+          ],
+        ),
       ),
     );
   }
@@ -251,17 +300,25 @@ class PostWidget extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 400),
+      // Removed the Stack to prevent overlay
+      child: Image.network(
+        post.mediaUrl!,
         width: double.infinity,
-        child: Image.network(
-          post.mediaUrl!,
-          fit: BoxFit.cover,
-          loadingBuilder: (ctx, child, progress) {
-            if (progress == null) return child;
-            return Container(height: 250, color: Colors.grey[200]);
-          },
-          errorBuilder: (ctx, err, stack) => Container(height: 250, color: Colors.grey[200]),
+        fit: BoxFit.cover,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          // Maintain a square aspect ratio for the placeholder
+          return AspectRatio(
+            aspectRatio: 1, 
+            child: Container(color: Colors.grey[200])
+          );
+        },
+        errorBuilder: (ctx, err, stack) => AspectRatio(
+          aspectRatio: 1, 
+          child: Container(
+            color: Colors.grey[200], 
+            child: const Icon(Icons.error, color: Colors.grey)
+          )
         ),
       ),
     );
@@ -278,23 +335,26 @@ class PostWidget extends StatelessWidget {
         );
       },
       child: Container(
-        width: double.infinity,
+        // Margin for link previews to distinguish them
+        margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
         decoration: BoxDecoration(
           border: Border.all(color: const Color(0xFFE0E0E0)),
+          borderRadius: BorderRadius.circular(8.0),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Preview Image
-            if(post.mediaUrl != null)
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  post.mediaUrl!,
-                  fit: BoxFit.cover,
+            if (post.mediaUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8.0)),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Image.network(
+                    post.mediaUrl!,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            // Preview Text
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -326,7 +386,7 @@ class PostWidget extends StatelessWidget {
       children: [
         Row(
           children: [
-            _buildActionItem(Icons.favorite_border, _formatCount(post.stats.likes), color: Colors.pinkAccent),
+            _buildActionItem(Icons.favorite_border, _formatCount(post.stats.likes)),
             const SizedBox(width: 20),
             _buildActionItem(Icons.chat_bubble_outline, post.stats.comments.toString()),
             const SizedBox(width: 20),
@@ -338,7 +398,7 @@ class PostWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildActionItem(IconData icon, String label, {Color? color}) {
+  Widget _buildActionItem(IconData icon, String label) {
     return Row(
       children: [
         Icon(icon, size: 22, color: Colors.grey[600]),

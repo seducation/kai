@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/select_contact_screen.dart';
 import 'package:my_app/cnm_calls_tabscreen.dart';
 import 'package:my_app/cnm_chats_tabscreen.dart';
-import 'package:my_app/cnm_meeting_tabscreen.dart';
+import 'package:my_app/cnm_reply_tabscreen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/cnm_notifications_tabscreen.dart';
 import 'package:my_app/cnm_updates_tabscreen.dart';
@@ -101,7 +101,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
               Tab(icon: Icon(Icons.notifications)),
               Tab(text: "Updates"),
               Tab(text: "Chat"),
-              Tab(text: "Meeting"),
+              Tab(text: "Reply"),
               Tab(icon: Icon(Icons.call)),
             ],
           ),
@@ -111,7 +111,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             const CNMNotificationsTabscreen(),
             const CNMUpdatesTabscreen(),
             CNMChatsTabscreen(chatItems: _chatItems),
-            const CNMMeetingTabscreen(),
+            const CNMReplyTabscreen(),
             const CNMCallsTabscreen(),
           ],
         ),

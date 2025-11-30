@@ -1,135 +1,15 @@
 import 'package:flutter/material.dart';
-
-// ---------------------------------------------------------------------------
-// 1. DATA MODELS (The "Base" Structure)
-// ---------------------------------------------------------------------------
-
-enum PostType { text, image, linkPreview, video }
-
-class User {
-  final String name;
-  final String handle;
-  final String avatarUrl;
-  final bool isVerified;
-
-  User({
-    required this.name,
-    required this.handle,
-    required this.avatarUrl,
-    this.isVerified = false,
-  });
-}
-
-class PostStats {
-  final int likes;
-  final int comments;
-  final int shares;
-  final int views;
-
-  PostStats({this.likes = 0, this.comments = 0, this.shares = 0, this.views = 0});
-}
-
-class Post {
-  final String id;
-  final User author;
-  final String timestamp;
-  final String contentText;
-  final PostType type;
-  final String? mediaUrl; // Image URL or Link Preview Image
-  final String? linkUrl; // For Link Previews
-  final String? linkTitle; // For Link Previews
-  final PostStats stats;
-
-  Post({
-    required this.id,
-    required this.author,
-    required this.timestamp,
-    required this.contentText,
-    this.type = PostType.text,
-    this.mediaUrl,
-    this.linkUrl,
-    this.linkTitle,
-    required this.stats,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// 2. MOCK DATA REPOSITORY
-// ---------------------------------------------------------------------------
-
-class MockData {
-  static final User currentUser = User(
-    name: "Alex Designer",
-    handle: "@alex_ux",
-    avatarUrl: "https://i.pravatar.cc/150?u=alex",
-  );
-
-  static final User techSource = User(
-    name: "Android for PCs",
-    handle: "@android_pc_mods",
-    avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/d/db/Android_robot_2014.svg", // Placeholder
-    isVerified: true,
-  );
-
-  static final User gamingSource = User(
-    name: "Warzone Updates",
-    handle: "@cod_warfare",
-    avatarUrl: "https://i.pravatar.cc/150?u=gaming",
-  );
-
-  static final User animeSource = User(
-    name: "Shonen Jump Daily",
-    handle: "@shonen_leaks",
-    avatarUrl: "https://i.pravatar.cc/150?u=anime",
-    isVerified: true,
-  );
-
-  static List<Post> getFeed() {
-    return [
-      // 1. Link Preview Style (Like the Apple News item)
-      Post(
-        id: '1',
-        author: techSource,
-        timestamp: "6d",
-        contentText: "We've overhauled our list of the best TVs to give you the most up-to-date recommendations – just in time for the holidays.",
-        type: PostType.linkPreview,
-        mediaUrl: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80", // iPhone/Apple image
-        linkTitle: "Apple Inc. is a multinational technology company known for its consumer electronics.",
-        linkUrl: "apple.com",
-        stats: PostStats(likes: 1240, comments: 45, shares: 120, views: 15000),
-      ),
-      // 2. Large Image Media Style (Like the Ghost Skin item)
-      Post(
-        id: '2',
-        author: gamingSource,
-        timestamp: "2h",
-        contentText: "The new Free Ghost Skin is absolutely CRAZY! 🤯 Check out the details below.",
-        type: PostType.image,
-        mediaUrl: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80", // Tactical gear image
-        stats: PostStats(likes: 8500, comments: 230, shares: 1400, views: 654000),
-      ),
-      // 3. Text Only Style
-      Post(
-        id: '3',
-        author: currentUser,
-        timestamp: "Just now",
-        contentText: "Just finished designing a new UI in Flutter. The declarative syntax makes building complex lists so much easier! #FlutterDev #UI",
-        type: PostType.text,
-        stats: PostStats(likes: 12, comments: 2, shares: 0, views: 45),
-      ),
-      // 4. Anime Image Style
-      Post(
-        id: '4',
-        author: animeSource,
-        timestamp: "12h",
-        contentText: "Vegeta's pride is on the line in the upcoming chapter. Who else is hyped?",
-        type: PostType.image,
-        mediaUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80", // Anime vibe
-        stats: PostStats(likes: 15000, comments: 890, shares: 3400, views: 250000),
-      ),
-    ];
-  }
-}
+import 'package:my_app/srv_aimode_tabscreen.dart';
+import 'package:my_app/srv_app_tabscreen.dart';
+import 'package:my_app/srv_chats_tabscreen.dart';
+import 'package:my_app/srv_feature_tabscreen.dart';
+import 'package:my_app/srv_files_tabscreen.dart';
+import 'package:my_app/srv_following_tabscreen.dart';
+import 'package:my_app/srv_forum_tabscreen.dart';
+import 'package:my_app/srv_music_tabscreen.dart';
+import 'package:my_app/srv_photos_tabscreen.dart';
+import 'package:my_app/srv_searchtools_tabscreen.dart';
+import 'package:my_app/srv_videos_tabscreen.dart';
 
 class ResultsSearches extends StatefulWidget {
   final String query;
@@ -140,20 +20,51 @@ class ResultsSearches extends StatefulWidget {
   State<ResultsSearches> createState() => _ResultsSearchesState();
 }
 
-class _ResultsSearchesState extends State<ResultsSearches> {
+class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderStateMixin {
   late TextEditingController _searchController;
+  late TabController _mainTabController;
   String _currentQuery = '';
+
+  final List<String> _tabs = [
+    'ai mode',
+    'feature',
+    'app',
+    'files',
+    'following',
+    'forum',
+    'music',
+    'photos',
+    'chats',
+    'search tools',
+    'videos',
+  ];
+
+  final List<Widget> _tabScreens = [
+    const SrvAimodeTabscreen(),
+    const SrvFeatureTabscreen(),
+    const SrvAppTabscreen(),
+    const SrvFilesTabscreen(),
+    const SrvFollowingTabscreen(),
+    const SrvForumTabscreen(),
+    const SrvMusicTabscreen(),
+    const SrvPhotosTabscreen(),
+    const SrvChatsTabscreen(),
+    const SrvSearchtoolsTabscreen(),
+    const SrvVideosTabscreen(),
+  ];
 
   @override
   void initState() {
     super.initState();
     _currentQuery = widget.query;
     _searchController = TextEditingController(text: _currentQuery);
+    _mainTabController = TabController(length: _tabs.length, vsync: this);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _mainTabController.dispose();
     super.dispose();
   }
 
@@ -165,7 +76,6 @@ class _ResultsSearchesState extends State<ResultsSearches> {
 
   @override
   Widget build(BuildContext context) {
-    final posts = MockData.getFeed();
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -195,445 +105,16 @@ class _ResultsSearchesState extends State<ResultsSearches> {
             onPressed: () {},
           ),
         ],
-      ),
-      body: ListView.separated(
-        itemCount: posts.length,
-        separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.white24),
-        itemBuilder: (context, index) {
-          return PostWidget(
-            post: posts[index],
-            allPosts: posts,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class PostWidget extends StatelessWidget {
-  final Post post;
-  final List<Post> allPosts;
-
-  const PostWidget({super.key, required this.post, required this.allPosts});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      color: Colors.black, // Feed background
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Avatar
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage(post.author.avatarUrl),
-            backgroundColor: Colors.grey[800],
-          ),
-          const SizedBox(width: 12),
-
-          // Right: Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Header (Name, Handle, Time)
-                Row(
-                  children: [
-                    Text(
-                      post.author.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
-                    ),
-                    if (post.author.isVerified) ...[
-                      const SizedBox(width: 4),
-                      const Icon(Icons.verified, color: Colors.blueAccent, size: 16),
-                    ],
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        "${post.author.handle} · ${post.timestamp}",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(Icons.more_horiz, color: Colors.grey[600], size: 18),
-                  ],
-                ),
-
-                // 2. Post Text
-                if (post.contentText.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(
-                      post.contentText,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.3),
-                    ),
-                  ),
-
-                const SizedBox(height: 8),
-
-                // 3. Dynamic Media Content
-                if (post.type == PostType.image)
-                  _buildImageContent(context),
-                if (post.type == PostType.linkPreview)
-                  _buildLinkPreview(context),
-
-                const SizedBox(height: 12),
-
-                // 4. Action Bar
-                _buildActionBar(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageContent(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        final imagePosts = allPosts.where((p) => p.type == PostType.image).toList();
-        final initialIndex = imagePosts.indexWhere((p) => p.id == post.id);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ShortsViewerScreen(
-              posts: imagePosts,
-              initialIndex: initialIndex,
-            ),
-          ),
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 300),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white12),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Image.network(
-            post.mediaUrl!,
-            fit: BoxFit.cover,
-            loadingBuilder: (ctx, child, progress) {
-              if (progress == null) return child;
-              return Container(height: 200, color: Colors.grey[900]);
-            },
-            errorBuilder: (ctx, err, stack) => Container(height: 200, color: Colors.grey[900]),
-          ),
+        bottom: TabBar(
+          controller: _mainTabController,
+          isScrollable: true,
+          tabs: _tabs.map((String name) => Tab(text: name)).toList(),
         ),
       ),
-    );
-  }
-
-  Widget _buildLinkPreview(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailPage(post: post),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF16181C),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Preview Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  post.mediaUrl!,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            // Preview Text
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post.linkTitle ?? "Link Preview",
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.link, size: 12, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        post.linkUrl ?? "link.com",
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+      body: TabBarView(
+        controller: _mainTabController,
+        children: _tabScreens,
       ),
-    );
-  }
-
-  Widget _buildActionBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildActionItem(Icons.chat_bubble_outline, post.stats.comments.toString()),
-        _buildActionItem(Icons.repeat, post.stats.shares.toString()),
-        _buildActionItem(Icons.favorite_border, _formatCount(post.stats.likes), color: Colors.pinkAccent),
-        _buildActionItem(Icons.bar_chart, _formatCount(post.stats.views)),
-        Icon(Icons.share, size: 18, color: Colors.grey[600]),
-      ],
-    );
-  }
-
-  Widget _buildActionItem(IconData icon, String label, {Color? color}) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      ],
-    );
-  }
-
-  String _formatCount(int count) {
-    if (count >= 1000) {
-      return "${(count / 1000).toStringAsFixed(1)}k";
-    }
-    return count.toString();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 4. DETAIL PAGE (Article/Wikipedia Style)
-// ---------------------------------------------------------------------------
-
-class DetailPage extends StatelessWidget {
-  final Post post;
-
-  const DetailPage({super.key, required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(post.linkUrl ?? "Details", style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.share_outlined)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post.mediaUrl != null)
-              Image.network(post.mediaUrl!,
-                  width: double.infinity, height: 250, fit: BoxFit.cover),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post.linkTitle ?? post.contentText,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage(post.author.avatarUrl),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        post.author.name,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 30, color: Colors.white12),
-                  Text(
-                    post.contentText,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[300], height: 1.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "This is the expanded content section, simulating the full page view you requested, similar to a Medium article or YouTube video description. Here, you would find paragraphs of text, more images, comments, and related videos, depending on the platform being mimicked.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[300], height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 5. SHORTS VIEWER (YouTube Shorts/TikTok Style)
-// ---------------------------------------------------------------------------
-
-class ShortsViewerScreen extends StatefulWidget {
-  final List<Post> posts;
-  final int initialIndex;
-
-  const ShortsViewerScreen({super.key, required this.posts, required this.initialIndex});
-
-  @override
-  ShortsViewerScreenState createState() => ShortsViewerScreenState();
-}
-
-class ShortsViewerScreenState extends State<ShortsViewerScreen> {
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: PageView.builder(
-        controller: _pageController,
-        scrollDirection: Axis.vertical,
-        itemCount: widget.posts.length,
-        itemBuilder: (context, index) {
-          return ShortsPage(post: widget.posts[index]);
-        },
-      ),
-    );
-  }
-}
-
-class ShortsPage extends StatelessWidget {
-  final Post post;
-
-  const ShortsPage({super.key, required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          post.mediaUrl!,
-          fit: BoxFit.cover,
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black.withAlpha(178), Colors.transparent, Colors.black.withAlpha(178)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.4, 1.0],
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundImage: NetworkImage(post.author.avatarUrl),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    post.author.handle,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                post.contentText,
-                style: const TextStyle(color: Colors.white),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DetailPage(post: post),
-                    ),
-                  );
-                },
-                child: const Row(
-                  children: [
-                    Icon(Icons.link, color: Colors.blueAccent, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      "View Details",
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-        ),
-        Positioned(
-          top: 40,
-          left: 16,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          )
-        )
-      ],
     );
   }
 }

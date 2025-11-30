@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class CNMMeetingTabscreen extends StatelessWidget {
-  const CNMMeetingTabscreen({super.key});
+class CNMReplyTabscreen extends StatelessWidget {
+  const CNMReplyTabscreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text('Meeting'),
+      child: Text('Reply'),
     );
   }
 }
