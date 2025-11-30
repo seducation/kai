@@ -33,41 +33,68 @@ class CalendarPage extends StatelessWidget {
     );
   }
 
-  // 1. Top Header (Date Range)
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: const Color.fromRGBO(176, 196, 222, 0.3), // Light blue-grey
-      child: const Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(Icons.arrow_back_ios, size: 16),
-          Text(
-            "23 / 8 / 2021 to 29 / 8 / 2021",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          const Text(
+            "May 2024",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
-          Icon(Icons.arrow_forward_ios, size: 16),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios, size: 18),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, size: 18),
+                onPressed: () {},
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // 2. Days of the Week Header (M 23, T 24...)
   Widget _buildDaysHeader() {
-    final List<String> days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    final List<String> dates = ['23', '24', '25', '26', '27', '28', '29'];
+    final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    final List<String> dates = ["13", "14", "15", "16", "17"];
 
-    return Container(
-      padding: const EdgeInsets.only(left: 50, top: 10, bottom: 10), // Left padding for time column
-      color: const Color.fromRGBO(176, 196, 222, 0.3),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(7, (index) {
+        children: List.generate(5, (index) {
+          final isToday = dates[index] == "14";
           return Column(
             children: [
-              Text(days[index], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-              const SizedBox(height: 4),
-              Text(dates[index], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                days[index],
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: isToday ? Colors.blue : Colors.transparent,
+                child: Text(
+                  dates[index],
+                  style: TextStyle(
+                    color: isToday ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           );
         }),
@@ -77,151 +104,99 @@ class CalendarPage extends StatelessWidget {
 }
 
 class TimeGrid extends StatelessWidget {
-  // Config
-  final double hourHeight = 60.0;
-  final double timeColumnWidth = 50.0;
-  final int startHour = 10; // 10 AM
-  final int endHour = 20;   // 8 PM
-
   const TimeGrid({super.key});
+
+  final double hourHeight = 60.0;
+  final int totalHours = 24;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // A. Time Labels Column
-        SizedBox(
-          width: timeColumnWidth,
-          child: Column(
-            children: List.generate((endHour - startHour) + 1, (index) {
-              int hour = startHour + index;
-              String timeText = (hour > 12) ? '${hour - 12} pm' : '$hour am';
-              if (hour == 12) timeText = '12 pm';
-              
-              return SizedBox(
-                height: hourHeight,
-                child: Text(
-                  timeText,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }),
-          ),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double totalWidth = constraints.maxWidth;
+        final double dayWidth = totalWidth / 5; // 5 days: Mon-Fri
 
-        // B. The Grid & Events Stack
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final double dayWidth = constraints.maxWidth / 7;
-
-              return Stack(
+        return Stack(
+          children: [
+            // Layer 1: Grid Lines and Time Labels
+            Positioned.fill(
+              child: Row(
                 children: [
-                  // Layer 1: Grid Lines
-                  Column(
-                    children: List.generate((endHour - startHour) + 1, (index) {
-                      return Container(
-                        height: hourHeight,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: Color.fromRGBO(158, 158, 158, 0.3)),
-                            // Vertical lines logic could be added here or via a Row overlay
+                  // Time Column
+                  SizedBox(
+                    width: 50,
+                    child: Column(
+                      children: List.generate(totalHours, (i) {
+                        return Container(
+                          height: hourHeight,
+                          alignment: Alignment.topCenter,
+                          child: Text(
+                            "${i.toString().padLeft(2, '0')}:00",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ),
                   ),
-                  
-                  // Vertical Grid Lines (Overlay)
-                  Row(
-                    children: List.generate(7, (index) {
-                      return Container(
-                        width: dayWidth,
-                        height: hourHeight * (endHour - startHour + 1),
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            right: BorderSide(color: Color.fromRGBO(158, 158, 158, 0.2)),
+                  // Days Grid
+                  Expanded(
+                    child: Column(
+                      children: List.generate(totalHours, (i) {
+                        return Container(
+                          height: hourHeight,
+                          decoration: BoxDecoration(
+                            border: Border(top: BorderSide(color: Colors.grey[200]!)),
                           ),
-                        ),
-                      );
-                    }),
-                  ),
-
-                  // Layer 2: Events
-                  // Client Meeting: Mon (0), 10am - 12pm
-                  _buildEventBlock(dayWidth, 0, 10, 2, "Client Meeting"),
-                  
-                  // Project Meeting: Mon (0), 2pm - 4pm
-                  _buildEventBlock(dayWidth, 0, 14, 2, "Project Meeting"),
-                  
-                  // Football Match: Wed (2), 2pm - 5pm
-                  _buildEventBlock(dayWidth, 2, 14, .3 as int, "Football Match"),
-
-                  // Joe's Birthday: Fri (4), 7pm - 8pm
-                  _buildEventBlock(dayWidth, 4, 19, 2, "Joe's Birthday"), // Made height 2h to match visual length in image
-
-                  // Layer 3: Current Time Indicator (Black line with dot)
-                  Positioned(
-                    top: (13.5 - startHour) * hourHeight, // Approx 1:30 PM
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            height: 1,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
+                        );
+                      }),
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-        ),
-      ],
+              ),
+            ),
+
+            // Layer 2: Events
+            // Client Meeting: Mon (0), 10am - 12pm
+            _buildEventBlock(dayWidth, 0, 10, 2, "Client Meeting"),
+            
+            // Project Meeting: Mon (0), 2pm - 4pm
+            _buildEventBlock(dayWidth, 0, 14, 2, "Project Meeting"),
+            
+            // Football Match: Wed (2), 2pm - 5pm
+            _buildEventBlock(dayWidth, 2, 14, 3, "Football Match"),
+
+            // Joe's Birthday: Fri (4), 7pm - 8pm
+            _buildEventBlock(dayWidth, 4, 19, 2, "Joe's Birthday"), // Made height 2h to match visual length in image
+
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildEventBlock(
-    double dayWidth, 
-    int dayIndex, 
-    int eventStartHour, 
-    int durationHours, 
-    String title
-  ) {
-    // Calculate Position relative to the grid
-    double top = (eventStartHour - startHour) * hourHeight;
-    double left = dayIndex * dayWidth;
-    double height = durationHours * hourHeight;
-
+  Widget _buildEventBlock(double dayWidth, int dayIndex, int startHour, int duration, String title) {
     return Positioned(
-      top: top,
-      left: left,
-      width: dayWidth,
-      height: height,
+      top: startHour * hourHeight,
+      left: 50 + (dayIndex * dayWidth) + 5, // 50 for time column, 5 for padding
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        padding: const EdgeInsets.all(4),
+        width: dayWidth - 10, // 10 for padding
+        height: duration * hourHeight, // Use integer duration
+        padding: const EdgeInsets.all(8.0),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E6F9F), // specific blue from image
-          borderRadius: BorderRadius.circular(6),
+          color: Colors.blue.withAlpha(38),
+          borderRadius: BorderRadius.circular(8),
+          border: const Border(left: BorderSide(color: Colors.blue, width: 3)),
         ),
         child: Text(
           title,
-          style: const TextStyle(color: Colors.white, fontSize: 11),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            color: Colors.black87,
+          ),
         ),
       ),
     );
