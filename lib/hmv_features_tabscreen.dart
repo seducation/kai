@@ -145,23 +145,157 @@ class HMVFeaturesTabscreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final posts = MockData.getFeed();
+    final allPosts = MockData.getFeed();
+    final shortsPosts = allPosts.where((p) => p.type == PostType.image).toList();
+    final regularPosts = allPosts.where((p) => p.type != PostType.image).toList();
+
+    // Create a list of widgets to display in the ListView
+    final List<Widget> feedItems = [];
+
+    // Add the first regular post
+    if (regularPosts.isNotEmpty) {
+      feedItems.add(PostWidget(post: regularPosts.first, allPosts: allPosts));
+    }
+
+    // Add the shorts rail
+    if (shortsPosts.isNotEmpty) {
+      feedItems.add(_buildShortsRail(context, shortsPosts));
+    }
+
+    // Add the rest of the regular posts
+    if (regularPosts.length > 1) {
+      feedItems.addAll(regularPosts.skip(1).map((post) => PostWidget(post: post, allPosts: allPosts)));
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: ListView.separated(
-        itemCount: posts.length,
-        separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE0E0E0)),
+        itemCount: feedItems.length,
+        separatorBuilder: (context, index) {
+          // Add a divider between all items
+          return const Divider(height: 1, color: Color(0xFFE0E0E0));
+        },
         itemBuilder: (context, index) {
-          return PostWidget(
-            post: posts[index],
-            allPosts: posts,
-          );
+          return feedItems[index];
         },
       ),
     );
   }
+
+  Widget _buildShortsRail(BuildContext context, List<Post> shortsPosts) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12.0),
+            child: Text(
+              "Shorts",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: shortsPosts.length,
+              itemBuilder: (context, index) {
+                return _ShortsThumbnail(
+                  post: shortsPosts[index],
+                  allPosts: shortsPosts,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+class _ShortsThumbnail extends StatelessWidget {
+  final Post post;
+  final List<Post> allPosts;
+
+  const _ShortsThumbnail({required this.post, required this.allPosts});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        final initialIndex = allPosts.indexWhere((p) => p.id == post.id);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ShortsViewerScreen(
+              posts: allPosts,
+              initialIndex: initialIndex,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.only(left: 12.0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12.0),
+              child: Image.network(
+                post.mediaUrl!,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.0),
+                gradient: const LinearGradient(
+                  colors: [Colors.transparent, Colors.black54],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundImage: NetworkImage(post.author.avatarUrl),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    post.author.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class PostWidget extends StatelessWidget {
   final Post post;
