@@ -42,7 +42,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   // Mock data
   final String name = 'My Awesome Channel';
   final String bio =
-      'Welcome to the official channel! Subscribe for the latest updates on everything cool.';
+      'Welcome to the official channel! Follow for the latest updates on everything cool.';
   final String? bannerImageUrl = 'https://picsum.photos/id/1015/1200/300';
   final String? profileImageUrl = 'https://picsum.photos/id/1025/200/200';
 
@@ -142,7 +142,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                "$_followersCount subscribers",
+                                "$_followersCount followers",
                                 style: const TextStyle(
                                     color: Colors.black54, fontSize: 12),
                               ),
@@ -179,7 +179,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                                 borderRadius: BorderRadius.circular(24)),
                           ),
                           child: Text(
-                              _isFollowing ? "Unsubscribe" : "Subscribe",
+                              _isFollowing ? "Unfollow" : "Follow",
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                         ),
