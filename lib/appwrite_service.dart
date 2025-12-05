@@ -205,9 +205,9 @@ class AppwriteService {
       },
        permissions: [
         Permission.read(Role.user(senderId)),
-        Permission.write(Role.user(senderId)),
+        Permission.update(Role.user(senderId)),
+        Permission.delete(Role.user(senderId)),
         Permission.read(Role.user(receiverId)),
-        Permission.write(Role.user(receiverId)),
       ],
     );
   }
