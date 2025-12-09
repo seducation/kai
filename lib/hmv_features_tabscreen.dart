@@ -35,6 +35,8 @@ class Post {
   final PostStats stats;
   double score;
   bool isLiked; // To track liked state locally
+  bool isSaved; // To track saved state locally
+
 
   Post({
     required this.id,
@@ -48,6 +50,7 @@ class Post {
     required this.stats,
     this.score = 0.0,
     this.isLiked = false, // Default to not liked
+    this.isSaved = false, // Default to not saved
   });
 }
 
@@ -117,7 +120,7 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
             shares: row.data['shares'] ?? 0,
             views: row.data['views'] ?? 0,
           ),
-          // We will manage the `isLiked` state within the PostWidget itself
+          // We will manage the `isLiked` and `isSaved` state within the PostWidget itself
         );
       }).whereType<Post>().toList();
 
@@ -315,6 +318,7 @@ class PostWidget extends StatefulWidget {
 
 class _PostWidgetState extends State<PostWidget> {
   late bool _isLiked;
+  late bool _isSaved;
   late int _likeCount;
   int _commentCount = 0;
   late AppwriteService _appwriteService;
@@ -325,6 +329,7 @@ class _PostWidgetState extends State<PostWidget> {
     super.initState();
     _appwriteService = context.read<AppwriteService>();
     _isLiked = false;
+    _isSaved = false;
     _likeCount = widget.post.stats.likes;
     _commentCount = widget.post.stats.comments;
     _initializeState();
@@ -335,6 +340,7 @@ class _PostWidgetState extends State<PostWidget> {
     _fetchCommentCount();
     setState(() {
       _isLiked = _prefs?.getBool(widget.post.id) ?? false;
+      _isSaved = _prefs?.getBool('saved_${widget.post.id}') ?? false;
     });
   }
 
@@ -401,6 +407,17 @@ class _PostWidgetState extends State<PostWidget> {
     }
   }
 
+  Future<void> _toggleSaved() async {
+    if (_prefs == null) return;
+
+    final newSavedState = !_isSaved;
+    setState(() {
+      _isSaved = newSavedState;
+    });
+
+    await _prefs!.setBool('saved_${widget.post.id}', newSavedState);
+  }
+
   void _openComments() async {
     final result = await Navigator.push(
       context,
@@ -461,13 +478,6 @@ class _PostWidgetState extends State<PostWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: _buildActionBar(),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 12.0, right: 12.0, bottom: 12.0),
-            child: Text(
-              '${DateTime.now().difference(widget.post.timestamp).inHours} hours ago',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
           ),
         ],
       ),
@@ -645,7 +655,25 @@ class _PostWidgetState extends State<PostWidget> {
             _buildActionItem(Icons.repeat, widget.post.stats.shares.toString()),
           ],
         ),
-        _buildActionItem(Icons.bar_chart, _formatCount(widget.post.stats.views)),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: _toggleSaved,
+              child: Icon(
+                _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                color: Colors.grey[600],
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 20),
+            Icon(Icons.share, color: Colors.grey[600], size: 22),
+            const SizedBox(width: 20),
+            Text(
+              '${DateTime.now().difference(widget.post.timestamp).inHours} hours ago',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        )
       ],
     );
   }
