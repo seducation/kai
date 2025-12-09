@@ -85,6 +85,7 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
           contentText: row.data['caption'] as String? ?? '',
           type: type,
           mediaUrl: mediaUrl,
+          linkUrl: row.data['linkUrl'] as String?, // Added this line
           // Appwrite posts don't have stats yet, so we use defaults.
           stats: PostStats(
             likes: row.data['likes'] ?? 0,

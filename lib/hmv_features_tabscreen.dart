@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import './profile_page.dart';
 import 'dart:math';
 import 'model/profile.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 // ---------------------------------------------------------------------------
 // 1. DATA MODELS ( The "Base" Structure )
@@ -190,7 +191,13 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
           contentText: row.data['caption'] as String? ?? '',
           type: type,
           mediaUrl: mediaUrl,
-          stats: PostStats(), // Defaulting to empty stats
+          linkUrl: row.data['linkUrl'] as String?,
+          stats: PostStats(
+            likes: row.data['likes'] ?? 0,
+            comments: row.data['comments'] ?? 0,
+            shares: row.data['shares'] ?? 0,
+            views: row.data['views'] ?? 0,
+          ),
         );
       }).whereType<Post>().toList();
 
@@ -303,6 +310,7 @@ class _ShortsThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
     return GestureDetector(
       onTap: () {
         final initialIndex = allPosts.indexWhere((p) => p.id == post.id);
@@ -322,14 +330,19 @@ class _ShortsThumbnail extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (post.mediaUrl != null)
+            if (isValidUrl)
             ClipRRect(
               borderRadius: BorderRadius.circular(12.0),
-              child: Image.network(
-                post.mediaUrl!,
+              child: CachedNetworkImage(
+                imageUrl: post.mediaUrl!,
                 fit: BoxFit.cover,
+                placeholder: (context, url) => Container(color: Colors.grey[200]),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.error, color: Colors.grey),
+                ),
               ),
-            ),
+            ) else Container(color: Colors.grey[200], child: const Icon(Icons.error, color: Colors.grey)),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.0),
@@ -350,7 +363,7 @@ class _ShortsThumbnail extends StatelessWidget {
                   if (post.author.profileImageUrl != null)
                   CircleAvatar(
                     radius: 12,
-                    backgroundImage: NetworkImage(post.author.profileImageUrl!),
+                    backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -455,6 +468,7 @@ class PostWidget extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     final handleColor = Colors.grey[600];
+    final bool isValidUrl = post.author.profileImageUrl != null && (post.author.profileImageUrl!.startsWith('http') || post.author.profileImageUrl!.startsWith('https'));
 
     return GestureDetector(
       onTap: () {
@@ -467,12 +481,12 @@ class PostWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
         child: Row(
           children: [
-            if(post.author.profileImageUrl != null)
+            if(isValidUrl)
             CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(post.author.profileImageUrl!),
+              backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
               backgroundColor: Colors.grey[200],
-            ),
+            ) else CircleAvatar(radius: 20, backgroundColor: Colors.grey[200]),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -497,6 +511,7 @@ class PostWidget extends StatelessWidget {
   }
 
   Widget _buildImageContent(BuildContext context) {
+    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
     return GestureDetector(
       onTap: () {
         final imagePosts = allPosts.where((p) => p.type == PostType.image).toList();
@@ -512,30 +527,33 @@ class PostWidget extends StatelessWidget {
         );
       },
       // Removed the Stack to prevent overlay
-      child: post.mediaUrl != null ? Image.network(
-        post.mediaUrl!,
+      child: isValidUrl ? CachedNetworkImage(
+        imageUrl: post.mediaUrl!,
         width: double.infinity,
         fit: BoxFit.cover,
-        loadingBuilder: (ctx, child, progress) {
-          if (progress == null) return child;
-          // Maintain a square aspect ratio for the placeholder
-          return AspectRatio(
+        placeholder: (context, url) => AspectRatio(
             aspectRatio: 1, 
             child: Container(color: Colors.grey[200])
-          );
-        },
-        errorBuilder: (ctx, err, stack) => AspectRatio(
+          ),
+        errorWidget: (context, url, error) => AspectRatio(
           aspectRatio: 1, 
           child: Container(
             color: Colors.grey[200], 
             child: const Icon(Icons.error, color: Colors.grey)
           )
         ),
-      ): Container(),
+      ): AspectRatio(
+          aspectRatio: 1, 
+          child: Container(
+            color: Colors.grey[200], 
+            child: const Icon(Icons.error, color: Colors.grey)
+          )
+        ),
     );
   }
 
   Widget _buildLinkPreview(BuildContext context) {
+    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -555,17 +573,22 @@ class PostWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (post.mediaUrl != null)
+            if (isValidUrl)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(8.0)),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: Image.network(
-                    post.mediaUrl!,
+                  child: CachedNetworkImage(
+                    imageUrl: post.mediaUrl!,
                     fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(color: Colors.grey[200]),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.error, color: Colors.grey),
+                    ),
                   ),
                 ),
-              ),
+              ) else AspectRatio(aspectRatio: 16/9, child: Container(color: Colors.grey[200], child: const Icon(Icons.error, color: Colors.grey))),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -641,6 +664,7 @@ class DetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -657,9 +681,11 @@ class DetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (post.mediaUrl != null)
-              Image.network(post.mediaUrl!,
-                  width: double.infinity, height: 250, fit: BoxFit.cover),
+            if (isValidUrl)
+              CachedNetworkImage(
+                  imageUrl: post.mediaUrl!,
+                  width: double.infinity, height: 250, fit: BoxFit.cover)
+            else Container(width: double.infinity, height: 250, color: Colors.grey[200], child: const Icon(Icons.error, color: Colors.grey)),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -680,7 +706,7 @@ class DetailPage extends StatelessWidget {
                       if (post.author.profileImageUrl != null)
                       CircleAvatar(
                         radius: 16,
-                        backgroundImage: NetworkImage(post.author.profileImageUrl!),
+                        backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -761,14 +787,15 @@ class ShortsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (post.mediaUrl != null)
-        Image.network(
-          post.mediaUrl!,
+        if (isValidUrl)
+        CachedNetworkImage(
+          imageUrl: post.mediaUrl!,
           fit: BoxFit.cover,
-        ),
+        ) else Container(color: Colors.black, child: const Center(child: Icon(Icons.error, color: Colors.white, size: 50))),
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -791,7 +818,7 @@ class ShortsPage extends StatelessWidget {
                   if(post.author.profileImageUrl != null)
                   CircleAvatar(
                     radius: 16,
-                    backgroundImage: NetworkImage(post.author.profileImageUrl!),
+                    backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
                   ),
                   const SizedBox(width: 8),
                   Text(

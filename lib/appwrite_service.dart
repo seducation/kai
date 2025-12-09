@@ -380,10 +380,7 @@ class AppwriteService {
   }
   
   String getFileViewUrl(String fileId) {
-    return _storage.getFileView(
-      bucketId: Environment.appwriteStorageBucketId,
-      fileId: fileId,
-    ).toString();
+    return '${Environment.appwritePublicEndpoint}/storage/buckets/${Environment.appwriteStorageBucketId}/files/$fileId/view?project=${Environment.appwriteProjectId}';
   }
 
   Future<models.RowList> searchPosts({required String query}) async {
