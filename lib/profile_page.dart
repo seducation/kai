@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/add_product.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/auth_service.dart';
 import 'package:my_app/model/profile.dart';
@@ -9,6 +10,7 @@ import 'package:my_app/tabs/home_tab.dart';
 import 'package:my_app/tabs/live_tab.dart';
 import 'package:my_app/tabs/podcasts_tab.dart';
 import 'package:my_app/tabs/posts_tab.dart';
+import 'package:my_app/tabs/products_tab.dart';
 import 'package:my_app/tabs/shorts_tab.dart';
 import 'package:my_app/tabs/videos_tab.dart';
 import 'package:provider/provider.dart';
@@ -34,20 +36,11 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   int _followersCount = 0;
   bool _isLoading = true;
 
-  final List<String> _tabs = [
-    "Home",
-    "Posts",
-    "Videos",
-    "Shorts",
-    "Live",
-    "Podcasts",
-    "About"
-  ];
+  List<String> _tabs = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
     _appwriteService = context.read<AppwriteService>();
     _authService = context.read<AuthService>();
     _loadProfileData();
@@ -73,6 +66,10 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
         if (_currentUserId != null) {
           _isFollowing = followers.contains(_currentUserId);
         }
+
+        _tabs = _getTabsForProfile(_profile);
+        _tabController = TabController(length: _tabs.length, vsync: this);
+
         _isLoading = false;
       });
     } catch (e) {
@@ -82,6 +79,22 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       });
       // Handle error, maybe show a snackbar
     }
+  }
+
+  List<String> _getTabsForProfile(Profile? profile) {
+    final baseTabs = [
+      "Home",
+      "Posts",
+      "Videos",
+      "Shorts",
+      "Live",
+      "Podcasts",
+    ];
+    if (profile?.type == 'business') {
+      baseTabs.add("Products");
+    }
+    baseTabs.add("About");
+    return baseTabs;
   }
 
   Future<void> _toggleFollow() async {
@@ -367,25 +380,54 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                   },
                   body: TabBarView(
                     controller: _tabController,
-                    children: const [
-                      HomeTab(),
-                      PostsTab(),
-                      VideosTab(),
-                      ShortsTab(),
-                      LiveTab(),
-                      PodcastsTab(),
-                      AboutTab(),
-                    ],
+                    children: _getTabViewsForProfile(_profile),
                   ),
                 ),
       floatingActionButton: showEditButton
-          ? FloatingActionButton(
-              onPressed: _showEditProfileDialog,
-              backgroundColor: Colors.black,
-              child: const Icon(Icons.edit),
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_profile?.type == 'business')
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddProductScreen(),
+                          ),
+                        );
+                      },
+                      backgroundColor: Colors.black,
+                      child: const Icon(Icons.shopping_bag),
+                    ),
+                  ),
+                FloatingActionButton(
+                  onPressed: _showEditProfileDialog,
+                  backgroundColor: Colors.black,
+                  child: const Icon(Icons.edit),
+                ),
+              ],
             )
           : null,
     );
+  }
+
+  List<Widget> _getTabViewsForProfile(Profile? profile) {
+    final baseTabViews = [
+      const HomeTab(),
+      const PostsTab(),
+      const VideosTab(),
+      const ShortsTab(),
+      const LiveTab(),
+      const PodcastsTab(),
+    ];
+    if (profile?.type == 'business') {
+      baseTabViews.add(const ProductsTab());
+    }
+    baseTabViews.add(const AboutTab());
+    return baseTabViews;
   }
 }
 

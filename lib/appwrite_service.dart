@@ -17,6 +17,7 @@ class AppwriteService {
   static const String postsCollection = "posts";
   static const String imagesCollection = "images";
   static const String commentsCollection = "comments";
+  static const String productsCollection = "products";
 
   AppwriteService(this._client) {
     _db = TablesDB(_client);
@@ -510,6 +511,37 @@ class AppwriteService {
     return models.RowList(
       total: allPosts.length,
       rows: allPosts.values.toList(),
+    );
+  }
+
+  Future<void> createProduct({
+    required String name,
+    required String description,
+    required double price,
+    required String profileId,
+  }) async {
+    final profile = await getProfile(profileId);
+    final ownerId = profile.data['ownerId'];
+
+    if (ownerId == null) {
+      throw AppwriteException('Could not determine the owner of the profile for this product.', 403);
+    }
+
+    await _db.createRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: productsCollection,
+      rowId: ID.unique(),
+      data: {
+        'name': name,
+        'description': description,
+        'price': price,
+        'profile_id': profileId,
+      },
+      permissions: [
+        Permission.read(Role.any()),
+        Permission.update(Role.user(ownerId)),
+        Permission.delete(Role.user(ownerId)),
+      ],
     );
   }
 }
