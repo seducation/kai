@@ -5,6 +5,7 @@ import './profile_page.dart';
 import 'dart:math';
 import 'model/profile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'comments_screen.dart';
 
 // ---------------------------------------------------------------------------
 // 1. DATA MODELS ( The "Base" Structure )
@@ -337,6 +338,15 @@ class _PostWidgetState extends State<PostWidget> {
     _appwriteService.updatePostLikes(widget.post.id, _likeCount);
   }
 
+  void _openComments() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CommentsScreen(post: widget.post),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -557,7 +567,10 @@ class _PostWidgetState extends State<PostWidget> {
               ),
             ),
             const SizedBox(width: 20),
-            _buildActionItem(Icons.comment, widget.post.stats.comments.toString()),
+            GestureDetector(
+              onTap: _openComments,
+              child: _buildActionItem(Icons.comment, widget.post.stats.comments.toString()),
+            ),
             const SizedBox(width: 20),
             _buildActionItem(Icons.repeat, widget.post.stats.shares.toString()),
           ],

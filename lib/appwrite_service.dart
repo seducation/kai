@@ -16,6 +16,7 @@ class AppwriteService {
   static const String messagesCollection = "messages";
   static const String postsCollection = "posts";
   static const String imagesCollection = "images";
+  static const String commentsCollection = "comments";
 
   AppwriteService(this._client) {
     _db = TablesDB(_client);
@@ -335,6 +336,40 @@ class AppwriteService {
       data: {
         'likes': likes,
       },
+    );
+  }
+
+  Future<models.RowList> getComments(String postId) async {
+    return _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: commentsCollection,
+      queries: [
+        Query.equal('post_id', postId),
+        Query.orderDesc('timestamp'),
+      ],
+    );
+  }
+
+  Future<void> createComment({
+    required String postId,
+    required String userId,
+    required String text,
+  }) async {
+    await _db.createRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: commentsCollection,
+      rowId: ID.unique(),
+      data: {
+        'post_id': postId,
+        'user_id': userId,
+        'text': text,
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+      permissions: [
+        Permission.read(Role.any()),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ],
     );
   }
 
