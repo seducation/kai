@@ -6,6 +6,7 @@ import 'dart:math';
 import 'model/profile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'comments_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // 1. DATA MODELS ( The "Base" Structure )
@@ -316,16 +317,26 @@ class _PostWidgetState extends State<PostWidget> {
   late bool _isLiked;
   late int _likeCount;
   late AppwriteService _appwriteService;
+  SharedPreferences? _prefs;
 
   @override
   void initState() {
     super.initState();
-    _isLiked = widget.post.isLiked;
-    _likeCount = widget.post.stats.likes;
     _appwriteService = context.read<AppwriteService>();
+    _initializeState();
+  }
+
+  Future<void> _initializeState() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isLiked = _prefs?.getBool(widget.post.id) ?? false;
+      _likeCount = widget.post.stats.likes;
+    });
   }
 
   Future<void> _toggleLike() async {
+    if (_prefs == null) return;
+
     final user = await _appwriteService.getUser();
     if (!mounted) return;
 
@@ -348,26 +359,22 @@ class _PostWidgetState extends State<PostWidget> {
       return;
     }
 
+    final newLikedState = !_isLiked;
+    final newLikeCount = newLikedState ? _likeCount + 1 : _likeCount - 1;
+
     setState(() {
-      _isLiked = !_isLiked;
-      if (_isLiked) {
-        _likeCount++;
-      } else {
-        _likeCount--;
-      }
+      _isLiked = newLikedState;
+      _likeCount = newLikeCount;
     });
 
     try {
-      await _appwriteService.updatePostLikes(widget.post.id, _likeCount);
+      await _appwriteService.updatePostLikes(widget.post.id, newLikeCount);
+      await _prefs!.setBool(widget.post.id, newLikedState);
     } catch (e) {
       // Revert the state if the update fails
       setState(() {
-        _isLiked = !_isLiked;
-        if (_isLiked) {
-          _likeCount++;
-        } else {
-          _likeCount--;
-        }
+        _isLiked = !newLikedState;
+        _likeCount = _isLiked ? newLikeCount + 1 : newLikeCount -1;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -388,6 +395,9 @@ class _PostWidgetState extends State<PostWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (_prefs == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Container(
       color: Colors.white,
       child: Column(
