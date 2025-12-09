@@ -7,6 +7,7 @@ import 'model/profile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'comments_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 // ---------------------------------------------------------------------------
 // 1. DATA MODELS ( The "Base" Structure )
@@ -710,7 +711,7 @@ class _PostWidgetState extends State<PostWidget> {
             Icon(Icons.share, color: Colors.grey[600], size: 22),
             const SizedBox(width: 20),
             Text(
-              '${DateTime.now().difference(widget.post.timestamp).inHours} hours ago',
+              _formatTimestamp(widget.post.timestamp),
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
@@ -737,6 +738,10 @@ class _PostWidgetState extends State<PostWidget> {
       return "${(count / 1000).toStringAsFixed(1)}k";
     }
     return count.toString();
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    return timeago.format(timestamp);
   }
 }
 

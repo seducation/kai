@@ -348,11 +348,16 @@ class AppwriteService {
       throw AppwriteException('Could not determine the owner of the profile for this post.', 403);
     }
 
+    final data = {
+      ...postData,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
     await _db.createRow(
       databaseId: Environment.appwriteDatabaseId,
       tableId: postsCollection,
       rowId: ID.unique(),
-      data: postData,
+      data: data,
       permissions: [
         Permission.read(Role.any()),
         Permission.update(Role.user(ownerId)),
