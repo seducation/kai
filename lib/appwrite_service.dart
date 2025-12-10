@@ -519,6 +519,8 @@ class AppwriteService {
     required String description,
     required double price,
     required String profileId,
+    required String location,
+    String? imageId,
   }) async {
     final profile = await getProfile(profileId);
     final ownerId = profile.data['ownerId'];
@@ -527,21 +529,35 @@ class AppwriteService {
       throw AppwriteException('Could not determine the owner of the profile for this product.', 403);
     }
 
+    final Map<String, dynamic> data = {
+      'name': name,
+      'description': description,
+      'price': price,
+      'profile_id': profileId,
+      'location': location,
+    };
+
+    if (imageId != null) {
+      data['imageId'] = imageId;
+    }
+
     await _db.createRow(
       databaseId: Environment.appwriteDatabaseId,
       tableId: productsCollection,
       rowId: ID.unique(),
-      data: {
-        'name': name,
-        'description': description,
-        'price': price,
-        'profile_id': profileId,
-      },
+      data: data,
       permissions: [
         Permission.read(Role.any()),
         Permission.update(Role.user(ownerId)),
         Permission.delete(Role.user(ownerId)),
       ],
+    );
+  }
+
+  Future<models.RowList> getProducts() async {
+    return _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: productsCollection,
     );
   }
 }
