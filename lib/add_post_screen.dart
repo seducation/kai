@@ -26,7 +26,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final _codeController = TextEditingController();
 
   List<PlatformFile> _selectedFiles = [];
-  String? _postType;
 
   String _codeLang = 'javascript';
   bool _isLoading = false;
@@ -69,12 +68,17 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   Future<void> _continueToPostDestination() async {
     if (_titleController.text.trim().isEmpty) {
-      _showSnackbar('Please add a title');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a title')),
+      );
       return;
     }
 
     if (_codeController.text.length > 5000) {
-      _showSnackbar('Code snippet cannot exceed 5000 characters');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Code snippet cannot exceed 5000 characters')),
+      );
       return;
     }
 
@@ -84,6 +88,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
     try {
       final appwriteService = context.read<AppwriteService>();
+      // 1. Upload files
       List<String> uploadedFileIds = [];
       for (final file in _selectedFiles) {
         if (file.bytes != null) {
@@ -99,15 +104,15 @@ class _AddPostScreenState extends State<AddPostScreen> {
         'titles': _titleController.text,
         'caption': _descriptionController.text,
         'tags': _tagsController.text.split(',').map((s) => s.trim()).toList(),
-        'location': '',
+        'location': '', // Placeholder
         'snippet': jsonEncode({
           'language': _codeLang,
           'content': _codeController.text,
         }),
         'file_ids': uploadedFileIds,
-        'type': _postType ?? 'text',
       };
 
+      // Show the WhereToPostScreen as a modal bottom sheet
       if (mounted) {
         showModalBottomSheet(
           context: context,
@@ -116,7 +121,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
       }
     } on AppwriteException catch (e) {
       if (mounted) {
-        _showSnackbar('Failed to upload files: ${e.message}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload files: ${e.message}')),
+        );
       }
     } finally {
       if (mounted) {
@@ -129,29 +136,21 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   Future<void> _pickFile() async {
     try {
+      // Use FilePicker to allow the user to select multiple files
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'png', 'mp4', 'mov', 'pdf', 'doc'],
-        withData: true,
+        allowedExtensions: ['jpg', 'pdf', 'doc', 'png'], // Example extensions
+        withData: true, // This is crucial for web and cross-platform uploads
       );
 
       if (result != null) {
         setState(() {
           _selectedFiles = result.files;
-          if (_selectedFiles.isNotEmpty) {
-            final extension = _selectedFiles.first.extension?.toLowerCase();
-            if (['jpg', 'png'].contains(extension)) {
-              _postType = 'image';
-            } else if (['mp4', 'mov'].contains(extension)) {
-              _postType = 'video';
-            } else {
-              _postType = 'file';
-            }
-          }
         });
         _showSnackbar('Successfully selected ${_selectedFiles.length} file(s).');
       } else {
+        // User canceled the picker
         _showSnackbar('File selection cancelled.');
       }
     } catch (e) {
@@ -159,25 +158,22 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
   }
 
+  // Helper function to show a temporary message
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Function to remove a selected file
   void _removeFile(PlatformFile file) {
     setState(() {
       _selectedFiles.remove(file);
-      if (_selectedFiles.isEmpty) {
-        _postType = null;
-      }
     });
     _showSnackbar('File removed: ${file.name}');
-  }
-
-  void _showSnackbar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   @override
@@ -202,8 +198,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ))
                   : const Text('Publish'),
             ),
           ),
@@ -216,6 +213,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           children: [
             _buildAttachments(),
             const SizedBox(height: 16),
+            // Title
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -225,10 +223,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+
+            // Toolbar and Description
             _buildDescriptionEditor(),
             const SizedBox(height: 16),
+
+            // Code Editor
             _buildCodeEditor(),
             const SizedBox(height: 16),
+
+            // Tags
             TextField(
               controller: _tagsController,
               decoration: const InputDecoration(
@@ -248,22 +252,43 @@ class _AddPostScreenState extends State<AddPostScreen> {
       children: [
         const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
+        // Toolbar
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              IconButton(icon: const Icon(Icons.format_bold), onPressed: () => _wrapSelection('**')),
-              IconButton(icon: const Icon(Icons.format_italic), onPressed: () => _wrapSelection('*')),
-              IconButton(icon: const Icon(Icons.looks_one), onPressed: () => _insertAtCursor('# ')),
-              IconButton(icon: const Icon(Icons.looks_two), onPressed: () => _insertAtCursor('## ')),
-              IconButton(icon: const Icon(Icons.format_list_bulleted), onPressed: () => _insertAtCursor('\n- ')),
-              IconButton(icon: const Icon(Icons.format_list_numbered), onPressed: () => _insertAtCursor('\n1. ')),
-              IconButton(icon: const Icon(Icons.code), onPressed: () => _wrapSelection('`')),
-              IconButton(icon: const Icon(Icons.insert_link), onPressed: () => _wrapSelection('[', '](url)')),
+              IconButton(
+                  icon: const Icon(Icons.format_bold),
+                  onPressed: () => _wrapSelection('**')),
+              IconButton(
+                  icon: const Icon(Icons.format_italic),
+                  onPressed: () => _wrapSelection('*')),
+              IconButton(
+                  icon: const Icon(Icons.looks_one),
+                  onPressed: () => _insertAtCursor('# ')),
+              IconButton(
+                  icon: const Icon(Icons.looks_two),
+                  onPressed: () => _insertAtCursor('## ')),
+              IconButton(
+                  icon: const Icon(Icons.format_list_bulleted),
+                  onPressed: () => _insertAtCursor('\n- ')),
+              IconButton(
+                  icon: const Icon(Icons.format_list_numbered),
+                  onPressed: () => _insertAtCursor('\n1. ')),
+              IconButton(
+                  icon: const Icon(Icons.code),
+                  onPressed: () => _wrapSelection('`')),
+              IconButton(
+                  icon: const Icon(Icons.insert_link),
+                  onPressed: () {
+                    // Simplified link insertion
+                    _wrapSelection('[', '](url)');
+                  }),
             ],
           ),
         ),
         const SizedBox(height: 8),
+        // Editor
         TextField(
           controller: _descriptionController,
           decoration: const InputDecoration(
@@ -283,7 +308,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       children: [
         Row(
           children: [
-            const Text('Snippet', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Snippet',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const Spacer(),
             DropdownButton<String>(
               value: _codeLang,
@@ -331,6 +357,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        // The main File Uploader/Dropzone UI
         GestureDetector(
           onTap: _pickFile,
           child: FileUploadArea(
@@ -338,18 +365,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
             onRemove: _removeFile,
           ),
         ),
+
         const SizedBox(height: 30),
+
+        // Display list of selected files (optional/visual confirmation)
         if (_selectedFiles.isNotEmpty)
           ..._selectedFiles.map((file) => Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: FileListItem(file: file, onRemove: () => _removeFile(file)),
+                child: FileListItem(
+                    file: file, onRemove: () => _removeFile(file)),
               )),
+
         if (_selectedFiles.isNotEmpty) const SizedBox(height: 16),
       ],
     );
   }
 }
 
+// Widget to handle the dashed border and core UI of the dropzone
 class FileUploadArea extends StatelessWidget {
   final List<PlatformFile> selectedFiles;
   final Function(PlatformFile) onRemove;
@@ -362,6 +395,7 @@ class FileUploadArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CustomPaint is used to draw the dashed border easily
     return CustomPaint(
       painter: DashedRectPainter(color: Colors.blueGrey, strokeWidth: 2, gap: 5),
       child: Container(
@@ -374,18 +408,29 @@ class FileUploadArea extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              const Icon(Icons.cloud_upload, color: Colors.blueAccent, size: 50.0),
+              const Icon(
+                Icons.cloud_upload,
+                color: Colors.blueAccent,
+                size: 50.0,
+              ),
               const SizedBox(height: 10),
               Text(
                 selectedFiles.isEmpty
                     ? 'Drag and drop or click to upload file(s)'
                     : '${selectedFiles.length} file(s) selected.',
-                style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 14, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.blueGrey.shade700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
                 textAlign: TextAlign.center,
               ),
               const Text(
-                'Supported formats: JPG, PNG, MP4, MOV, PDF, DOC',
-                style: TextStyle(color: Colors.blueGrey, fontSize: 12),
+                'Supported formats: JPG, PNG, PDF, DOC',
+                style: TextStyle(
+                  color: Colors.blueGrey,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -395,6 +440,7 @@ class FileUploadArea extends StatelessWidget {
   }
 }
 
+// Helper widget to display a list item for a selected file
 class FileListItem extends StatelessWidget {
   final PlatformFile file;
   final VoidCallback onRemove;
@@ -440,6 +486,7 @@ class FileListItem extends StatelessWidget {
   }
 }
 
+// Custom Painter for drawing the dashed border effect
 class DashedRectPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;

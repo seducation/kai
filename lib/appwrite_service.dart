@@ -482,10 +482,6 @@ class AppwriteService {
     return '${Environment.appwritePublicEndpoint}/storage/buckets/${Environment.appwriteStorageBucketId}/files/$fileId/view?project=${Environment.appwriteProjectId}';
   }
 
-  String getFileThumbnailUrl(String fileId) {
-    return '${Environment.appwritePublicEndpoint}/storage/buckets/${Environment.appwriteStorageBucketId}/files/$fileId/preview?project=${Environment.appwriteProjectId}';
-  }
-
   Future<models.RowList> searchPosts({required String query}) async {
     final results = await Future.wait([
       _db.listRows(

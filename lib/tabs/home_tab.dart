@@ -1,8 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:my_app/appwrite_client.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/post_detail_screen.dart';
-import 'package:provider/provider.dart';
 
 enum PostType { text, image, video }
 
@@ -19,7 +18,6 @@ class User {
 class Post {
   final String id;
   final User author;
-  final DateTime timestamp;
   final String? mediaUrl;
   final String caption;
   final PostType type;
@@ -27,7 +25,6 @@ class Post {
   Post({
     required this.id,
     required this.author,
-    required this.timestamp,
     this.mediaUrl,
     required this.caption,
     required this.type,
@@ -50,7 +47,7 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
-    _appwriteService = context.read<AppwriteService>();
+    _appwriteService = AppwriteService(AppwriteClient().client);
     _fetchPosts();
   }
 
@@ -60,51 +57,22 @@ class _HomeTabState extends State<HomeTab> {
       final posts = await Future.wait(postsResponse.rows.map((row) async {
         final authorProfile =
             await _appwriteService.getProfile(row.data['profile_id']);
-        
-        final profileImageUrl = authorProfile.data['profileImageUrl'];
         final author = User(
           name: authorProfile.data['name'],
-          avatarUrl: profileImageUrl != null && profileImageUrl.isNotEmpty
-              ? _appwriteService.getFileViewUrl(profileImageUrl)
-              : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+          avatarUrl: authorProfile.data['profileImageUrl'],
         );
-
-        final fileIdsData = row.data['file_ids'];
-        final List<String> fileIds = fileIdsData is List ? List<String>.from(fileIdsData.map((id) => id.toString())) : [];
-
-        String? postTypeString = row.data['type'];
-        if (postTypeString == null && fileIds.isNotEmpty) {
-          postTypeString = 'image'; // Infer type for old data
-        }
-        final postType = _getPostType(postTypeString);
-
-        String? mediaUrl;
-
-        if (fileIds.isNotEmpty) {
-          if (postType == PostType.image) {
-            mediaUrl = _appwriteService.getFileViewUrl(fileIds.first);
-          } else if (postType == PostType.video) {
-            mediaUrl = _appwriteService.getFileThumbnailUrl(fileIds.first);
-          }
-        }
-
         return Post(
           id: row.$id,
           author: author,
-          timestamp: DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
-          mediaUrl: mediaUrl,
+          mediaUrl: row.data['mediaUrl'],
           caption: row.data['caption'],
-          type: postType,
+          type: _getPostType(row.data['type']),
         );
       }));
 
-      // Filter for posts that have images and sort them.
-      final imagePosts = posts.where((p) => p.mediaUrl != null).toList();
-      imagePosts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
       if (mounted) {
         setState(() {
-          _posts = imagePosts;
+          _posts = posts;
           _isLoading = false;
         });
       }
@@ -151,38 +119,44 @@ class _HomeTabState extends State<HomeTab> {
                     itemCount: _posts.length,
                     itemBuilder: (context, index) {
                       final post = _posts[index];
-
+                      if (post.mediaUrl == null) {
+                        return Container(color: Colors.grey[800]);
+                      }
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => PostDetailScreen(post: post),
+                              builder: (context) =>
+                                  PostDetailScreen(post: post),
                             ),
                           );
                         },
-                        child: Card(
-                          clipBehavior: Clip.antiAlias,
-                          child: GridTile(
-                            footer: post.type == PostType.video
-                                ? const GridTileBar(
-                                    backgroundColor: Colors.black45,
-                                    trailing: Icon(
-                                      Icons.play_circle_outline,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : null,
-                            child: CachedNetworkImage(
-                              imageUrl: post.mediaUrl!,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              post.mediaUrl!,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(color: Colors.white),
-                              errorWidget: (context, url, error) {
-                                debugPrint("Grid Image Error for url $url: $error");
-                                return Container(color: Colors.red.withAlpha(128));
+                              loadingBuilder: (ctx, child, progress) {
+                                if (progress == null) return child;
+                                return Container(color: Colors.grey[900]);
                               },
+                              errorBuilder: (ctx, err, stack) =>
+                                  Container(color: Colors.grey[900]),
                             ),
-                          ),
+                            if (post.type == PostType.video)
+                              const Align(
+                                alignment: Alignment.topRight,
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       );
                     },
