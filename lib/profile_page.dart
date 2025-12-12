@@ -37,6 +37,9 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   int _followersCount = 0;
   bool _isLoading = true;
 
+  String? _fullProfileImageUrl;
+  String? _fullBannerImageUrl;
+
   List<String> _tabs = [];
 
   @override
@@ -61,8 +64,18 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       if (!mounted) return;
       final followers = List<String>.from(profileRow.data['followers'] ?? []);
 
+      final profileImageId = profileRow.data['profileImageUrl'];
+      final bannerImageId = profileRow.data['bannerImageUrl'];
+
       setState(() {
         _profile = Profile.fromRow(profileRow);
+        if (profileImageId != null && profileImageId.isNotEmpty) {
+          _fullProfileImageUrl = _appwriteService.getFileViewUrl(profileImageId);
+        }
+        if (bannerImageId != null && bannerImageId.isNotEmpty) {
+          _fullBannerImageUrl = _appwriteService.getFileViewUrl(bannerImageId);
+        }
+
         _followersCount = followers.length;
         if (_currentUserId != null) {
           _isFollowing = followers.contains(_currentUserId);
@@ -186,10 +199,10 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                               onPressed: () {}),
                         ],
                         flexibleSpace: FlexibleSpaceBar(
-                          background: _profile!.profileImageUrl != null &&
-                                  _profile!.profileImageUrl!.isNotEmpty
+                          background: _fullBannerImageUrl != null &&
+                                  _fullBannerImageUrl!.isNotEmpty
                               ? CachedNetworkImage(
-                                  imageUrl: _profile!.profileImageUrl!,
+                                  imageUrl: _fullBannerImageUrl!,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) =>
                                       Shimmer.fromColors(
@@ -214,16 +227,14 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                                   CircleAvatar(
                                     radius: 36,
                                     backgroundColor: Colors.grey[300],
-                                    backgroundImage: _profile!
-                                                .profileImageUrl !=
+                                    backgroundImage: _fullProfileImageUrl !=
                                             null &&
-                                            _profile!
-                                                .profileImageUrl!.isNotEmpty
+                                            _fullProfileImageUrl!.isNotEmpty
                                         ? CachedNetworkImageProvider(
-                                            _profile!.profileImageUrl!)
+                                            _fullProfileImageUrl!)
                                         : null,
-                                    child: _profile!.profileImageUrl == null ||
-                                            _profile!.profileImageUrl!.isEmpty
+                                    child: _fullProfileImageUrl == null ||
+                                            _fullProfileImageUrl!.isEmpty
                                         ? Icon(Icons.person,
                                             size: 40, color: Colors.grey[600])
                                         : null,

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,8 +41,6 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
   String? _profileId;
   File? _profileImage;
   File? _bannerImage;
-  List<String> _handleImageIds = [];
-  List<String> _bannerImageIds = [];
   String? _profileImageUrl;
   String? _bannerImageUrl;
 
@@ -67,14 +66,15 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
             _handleController.text = profile.data['handle'] ?? '';
             _locationController.text = profile.data['location'] ?? '';
             _privacy = profile.data['privacy'] ?? 'Public';
-            _handleImageIds = List<String>.from(profile.data['handleImage'] ?? []);
-            _bannerImageIds = List<String>.from(profile.data['handleBanner'] ?? []);
 
-            if (_handleImageIds.isNotEmpty) {
-              _profileImageUrl = appwriteService.getFileViewUrl(_handleImageIds.last);
+            final profileImageId = profile.data['profileImageUrl'];
+            if (profileImageId != null && profileImageId.isNotEmpty) {
+              _profileImageUrl = appwriteService.getFileViewUrl(profileImageId);
             }
-            if (_bannerImageIds.isNotEmpty) {
-              _bannerImageUrl = appwriteService.getFileViewUrl(_bannerImageIds.last);
+
+            final bannerImageId = profile.data['bannerImageUrl'];
+            if (bannerImageId != null && bannerImageId.isNotEmpty) {
+              _bannerImageUrl = appwriteService.getFileViewUrl(bannerImageId);
             }
           });
         }
@@ -124,33 +124,29 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
         final appwriteService =
             Provider.of<AppwriteService>(context, listen: false);
 
-        List<String> updatedHandleImageIds = List.from(_handleImageIds);
-        if (_profileImage != null) {
-          final file = await appwriteService.uploadFile(
-            bytes: _profileImage!.readAsBytesSync(),
-            filename: _profileImage!.path.split('/').last,
-          );
-          updatedHandleImageIds.add(file.$id);
-        }
-
-        List<String> updatedBannerImageIds = List.from(_bannerImageIds);
-        if (_bannerImage != null) {
-          final file = await appwriteService.uploadFile(
-            bytes: _bannerImage!.readAsBytesSync(),
-            filename: _bannerImage!.path.split('/').last,
-          );
-          updatedBannerImageIds.add(file.$id);
-        }
-
         final Map<String, dynamic> dataToUpdate = {
           'name': _nameController.text,
           'bio': _bioController.text,
           'handle': _handleController.text,
           'location': _locationController.text,
           'privacy': _privacy,
-          'handleImage': updatedHandleImageIds,
-          'handleBanner': updatedBannerImageIds,
         };
+
+        if (_profileImage != null) {
+          final file = await appwriteService.uploadFile(
+            bytes: _profileImage!.readAsBytesSync(),
+            filename: _profileImage!.path.split('/').last,
+          );
+          dataToUpdate['profileImageUrl'] = file.$id;
+        }
+
+        if (_bannerImage != null) {
+          final file = await appwriteService.uploadFile(
+            bytes: _bannerImage!.readAsBytesSync(),
+            filename: _bannerImage!.path.split('/').last,
+          );
+          dataToUpdate['bannerImageUrl'] = file.$id;
+        }
 
         await appwriteService.updateProfile(
           profileId: _profileId!,
@@ -174,8 +170,6 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       insetPadding: const EdgeInsets.all(16),
@@ -261,7 +255,7 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
                 ),
               ),
               const Divider(height: 1),
-              _buildFooter(context, theme),
+              _buildFooter(context),
             ],
           ),
         ),
@@ -291,7 +285,7 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
     );
   }
 
-  Widget _buildFooter(BuildContext context, ThemeData theme) {
+  Widget _buildFooter(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -339,19 +333,22 @@ class ChannelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    ImageProvider? bannerImageProvider;
-    if (bannerImage != null) {
-      bannerImageProvider = FileImage(bannerImage!);
-    } else if (bannerImageUrl != null) {
-      bannerImageProvider = NetworkImage(bannerImageUrl!);
-    }
 
-    ImageProvider? profileImageProvider;
-    if (profileImage != null) {
-      profileImageProvider = FileImage(profileImage!);
-    } else if (profileImageUrl != null) {
-      profileImageProvider = NetworkImage(profileImageUrl!);
+    Widget bannerWidget;
+    if (bannerImage != null) {
+      bannerWidget = Image.file(bannerImage!, fit: BoxFit.cover);
+    } else if (bannerImageUrl != null && bannerImageUrl!.isNotEmpty) {
+      bannerWidget = CachedNetworkImage(
+        imageUrl: bannerImageUrl!,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(color: theme.colorScheme.secondaryContainer),
+        errorWidget: (context, url, error) =>
+            Center(child: Icon(Icons.image, color: theme.colorScheme.onSecondaryContainer)),
+      );
+    } else {
+      bannerWidget = Center(
+          child: Icon(Icons.image,
+              color: theme.colorScheme.onSecondaryContainer, size: 50));
     }
 
     return Column(
@@ -363,19 +360,7 @@ class ChannelHeader extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (bannerImageProvider != null)
-                  Image(
-                    image: bannerImageProvider,
-                    fit: BoxFit.cover,
-                  )
-                else
-                  Center(
-                    child: Icon(
-                      Icons.image,
-                      color: (theme.iconTheme.color ?? Colors.black).withAlpha(97),
-                      size: 50,
-                    ),
-                  ),
+                bannerWidget,
                 Positioned(
                   bottom: 8,
                   right: 8,
@@ -406,16 +391,24 @@ class ChannelHeader extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 20.0),
                     child: CircleAvatar(
                       radius: 40,
-                      backgroundColor: Colors.white,
-                      backgroundImage: profileImageProvider,
-                      child: profileImageProvider == null
-                          ? ClipOval(
-                              child: const Icon(
-                                Icons.person,
-                                size: 50,
-                              ),
-                            )
-                          : null,
+                      backgroundColor: theme.colorScheme.secondaryContainer,
+                      child: ClipOval(
+                        child: SizedBox.fromSize(
+                          size: const Size.fromRadius(40),
+                          child: (
+                            profileImage != null 
+                            ? Image.file(profileImage!, fit: BoxFit.cover)
+                            : (profileImageUrl != null && profileImageUrl!.isNotEmpty)
+                              ? CachedNetworkImage(
+                                  imageUrl: profileImageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+                                  errorWidget: (context, url, error) => Icon(Icons.person, size: 50, color: theme.colorScheme.onSecondaryContainer),
+                                )
+                              : Icon(Icons.person, size: 50, color: theme.colorScheme.onSecondaryContainer)
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -452,7 +445,6 @@ class ChannelHeader extends StatelessWidget {
     );
   }
 }
-
 
 // --- Reusable Custom Input Field with NULL Checkbox and Counter ---
 class CustomTextField extends StatefulWidget {
