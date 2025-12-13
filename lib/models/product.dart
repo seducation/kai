@@ -20,12 +20,12 @@ class Product {
   factory Product.fromMap(Map<String, dynamic> map, String id) {
     return Product(
       id: id,
-      name: map['name'],
-      description: map['description'],
-      price: (map['price'] as num).toDouble(),
-      location: map['location'],
+      name: map['name'] ?? 'Unnamed Product',
+      description: map['description'] ?? '',
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      location: map['location'] ?? 'Unknown Location',
       imageId: map['imageId'],
-      profileId: map['profile_id'],
+      profileId: map['profile_id'] ?? '',
     );
   }
 }

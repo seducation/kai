@@ -11,7 +11,7 @@ class ProductsTab extends StatelessWidget {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: ProductGrid(profileId: profileId),
+        child: ProductGrid(key: ValueKey(profileId), profileId: profileId),
       ),
     );
   }

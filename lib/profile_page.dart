@@ -27,7 +27,7 @@ class ProfilePageScreen extends StatefulWidget {
 
 class _ProfilePageScreenState extends State<ProfilePageScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
   late AppwriteService _appwriteService;
   late AuthService _authService;
   Profile? _profile;
@@ -41,6 +41,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   String? _fullBannerImageUrl;
 
   List<String> _tabs = [];
+  List<Widget> _tabViews = [];
 
   @override
   void initState() {
@@ -48,6 +49,20 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
     _appwriteService = context.read<AppwriteService>();
     _authService = context.read<AuthService>();
     _loadProfileData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tabController != null) {
+      _tabController!.addListener(_handleTabSelection);
+    }
+  }
+
+  void _handleTabSelection() {
+    if (_tabController!.indexIsChanging) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadProfileData() async {
@@ -64,26 +79,27 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       if (!mounted) return;
       final followers = List<String>.from(profileRow.data['followers'] ?? []);
 
-      final profileImageId = profileRow.data['profileImageUrl'];
+      _profile = Profile.fromRow(profileRow);
+
+      final profileImageId = _profile!.profileImageUrl;
       final bannerImageId = profileRow.data['bannerImageUrl'];
 
+      _fullProfileImageUrl = (profileImageId != null && profileImageId.isNotEmpty)
+          ? _appwriteService.getFileViewUrl(profileImageId)
+          : null;
+
+      _fullBannerImageUrl = (bannerImageId != null && bannerImageId.isNotEmpty)
+          ? _appwriteService.getFileViewUrl(bannerImageId)
+          : null;
+
+      _followersCount = followers.length;
+      if (_currentUserId != null) {
+        _isFollowing = followers.contains(_currentUserId);
+      }
+
+      _initializeTabs();
+
       setState(() {
-        _profile = Profile.fromRow(profileRow);
-        if (profileImageId != null && profileImageId.isNotEmpty) {
-          _fullProfileImageUrl = _appwriteService.getFileViewUrl(profileImageId);
-        }
-        if (bannerImageId != null && bannerImageId.isNotEmpty) {
-          _fullBannerImageUrl = _appwriteService.getFileViewUrl(bannerImageId);
-        }
-
-        _followersCount = followers.length;
-        if (_currentUserId != null) {
-          _isFollowing = followers.contains(_currentUserId);
-        }
-
-        _tabs = _getTabsForProfile(_profile);
-        _tabController = TabController(length: _tabs.length, vsync: this);
-
         _isLoading = false;
       });
     } catch (e) {
@@ -93,6 +109,14 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       });
       // Handle error, maybe show a snackbar
     }
+  }
+
+  void _initializeTabs() {
+    _tabs = _getTabsForProfile(_profile);
+    _tabViews = _getTabViewsForProfile(_profile);
+    _tabController?.dispose(); // Dispose old controller if exists
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController!.addListener(_handleTabSelection);
   }
 
   List<String> _getTabsForProfile(Profile? profile) {
@@ -153,7 +177,8 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.removeListener(_handleTabSelection);
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -167,7 +192,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
+      body: _isLoading || _tabController == null
           ? const Center(child: CircularProgressIndicator())
           : _profile == null
               ? const Center(child: Text("Profile not found"))
@@ -327,7 +352,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                   },
                   body: TabBarView(
                     controller: _tabController,
-                    children: _getTabViewsForProfile(_profile),
+                    children: _tabViews,
                   ),
                 ),
       floatingActionButton: showEditButton
@@ -343,7 +368,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const AddProductScreen(),
+                            builder: (context) => AddProductScreen(profileId: widget.profileId),
                           ),
                         );
                       },
@@ -351,7 +376,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                       child: const Icon(Icons.shopping_bag),
                     ),
                   ),
-                const EditProfileFAB(),
+                EditProfileFAB(profileId: widget.profileId),
               ],
             )
           : null,

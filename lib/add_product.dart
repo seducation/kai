@@ -6,7 +6,8 @@ import 'package:my_app/appwrite_service.dart';
 import 'package:provider/provider.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  final String profileId;
+  const AddProductScreen({super.key, required this.profileId});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -40,8 +41,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       try {
         final appwriteService = context.read<AppwriteService>();
-        final profiles = await appwriteService.getUserProfiles(ownerId: (await appwriteService.getUser())!.$id);
-        final profileId = profiles.rows.first.$id;
 
         // Note: You'll need to handle the image upload to Appwrite Storage
         // and get the file ID to store in the product document.
@@ -51,7 +50,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           name: _productName,
           description: _productDescription,
           price: _productPrice,
-          profileId: profileId,
+          profileId: widget.profileId, // Use the correct profileId from the widget
           location: _productLocation,
           // You would pass the image file ID here
         );

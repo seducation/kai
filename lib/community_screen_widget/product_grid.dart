@@ -15,19 +15,35 @@ class ProductGrid extends StatefulWidget {
 
 class _ProductGridState extends State<ProductGrid> {
   late Future<List<Product>> _productsFuture;
+  late AppwriteService _appwriteService;
 
   @override
   void initState() {
     super.initState();
+    _appwriteService = Provider.of<AppwriteService>(context, listen: false);
     _productsFuture = _getProducts();
   }
 
+  @override
+  void didUpdateWidget(ProductGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profileId != widget.profileId) {
+      setState(() {
+        _productsFuture = _getProducts();
+      });
+    }
+  }
+
   Future<List<Product>> _getProducts() async {
-    final appwriteService = Provider.of<AppwriteService>(context, listen: false);
+    debugPrint('Fetching products for profileId: ${widget.profileId}');
     try {
       final response = widget.profileId != null
-          ? await appwriteService.getProductsByProfile(widget.profileId!)
-          : await appwriteService.getProducts();
+          ? await _appwriteService.getProductsByProfile(widget.profileId!)
+          : await _appwriteService.getProducts();
+      debugPrint('Appwrite response received. Total documents: ${response.total}');
+      for (var row in response.rows) {
+          debugPrint('Row data: ${row.data}');
+      }
       return response.rows
           .map((row) => Product.fromMap(row.data, row.$id))
           .toList();

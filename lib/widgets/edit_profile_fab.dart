@@ -8,7 +8,8 @@ import 'package:my_app/appwrite_service.dart';
 import 'package:provider/provider.dart';
 
 class EditProfileFAB extends StatelessWidget {
-  const EditProfileFAB({super.key});
+  final String profileId;
+  const EditProfileFAB({super.key, required this.profileId});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +17,7 @@ class EditProfileFAB extends StatelessWidget {
       onPressed: () {
         showDialog(
           context: context,
-          builder: (context) => const ChannelSettingsDialog(),
+          builder: (context) => ChannelSettingsDialog(profileId: profileId),
         );
       },
       child: const Icon(Icons.edit),
@@ -25,7 +26,8 @@ class EditProfileFAB extends StatelessWidget {
 }
 
 class ChannelSettingsDialog extends StatefulWidget {
-  const ChannelSettingsDialog({super.key});
+  final String profileId;
+  const ChannelSettingsDialog({super.key, required this.profileId});
 
   @override
   State<ChannelSettingsDialog> createState() => _ChannelSettingsDialogState();
@@ -38,7 +40,6 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
   final _handleController = TextEditingController();
   final _locationController = TextEditingController();
   String _privacy = 'Public';
-  String? _profileId;
   File? _profileImage;
   File? _bannerImage;
   String? _profileImageUrl;
@@ -54,31 +55,24 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
     try {
       final appwriteService =
           Provider.of<AppwriteService>(context, listen: false);
-      final user = await appwriteService.getUser();
-      if (user != null) {
-        final profiles = await appwriteService.getUserProfiles(ownerId: user.$id);
-        if (profiles.rows.isNotEmpty) {
-          final profile = profiles.rows.first;
-          setState(() {
-            _profileId = profile.$id;
-            _nameController.text = profile.data['name'] ?? '';
-            _bioController.text = profile.data['bio'] ?? '';
-            _handleController.text = profile.data['handle'] ?? '';
-            _locationController.text = profile.data['location'] ?? '';
-            _privacy = profile.data['privacy'] ?? 'Public';
+      final profile = await appwriteService.getProfile(widget.profileId);
+      setState(() {
+        _nameController.text = profile.data['name'] ?? '';
+        _bioController.text = profile.data['bio'] ?? '';
+        _handleController.text = profile.data['handle'] ?? '';
+        _locationController.text = profile.data['location'] ?? '';
+        _privacy = profile.data['privacy'] ?? 'Public';
 
-            final profileImageId = profile.data['profileImageUrl'];
-            if (profileImageId != null && profileImageId.isNotEmpty) {
-              _profileImageUrl = appwriteService.getFileViewUrl(profileImageId);
-            }
-
-            final bannerImageId = profile.data['bannerImageUrl'];
-            if (bannerImageId != null && bannerImageId.isNotEmpty) {
-              _bannerImageUrl = appwriteService.getFileViewUrl(bannerImageId);
-            }
-          });
+        final profileImageId = profile.data['profileImageUrl'];
+        if (profileImageId != null && profileImageId.isNotEmpty) {
+          _profileImageUrl = appwriteService.getFileViewUrl(profileImageId);
         }
-      }
+
+        final bannerImageId = profile.data['bannerImageUrl'];
+        if (bannerImageId != null && bannerImageId.isNotEmpty) {
+          _bannerImageUrl = appwriteService.getFileViewUrl(bannerImageId);
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,7 +113,7 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
   }
 
   Future<void> _saveSettings() async {
-    if (_formKey.currentState!.validate() && _profileId != null) {
+    if (_formKey.currentState!.validate()) {
       try {
         final appwriteService =
             Provider.of<AppwriteService>(context, listen: false);
@@ -149,7 +143,7 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
         }
 
         await appwriteService.updateProfile(
-          profileId: _profileId!,
+          profileId: widget.profileId,
           data: dataToUpdate,
         );
 
