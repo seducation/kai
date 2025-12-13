@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'appwrite_service.dart';
+import 'model/profile.dart';
 import 'where_to_post.dart';
 
 // Mimics the functionality of the provided React PostEditor component.
@@ -26,11 +27,33 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final _codeController = TextEditingController();
 
   List<PlatformFile> _selectedFiles = [];
+  List<Profile> _profiles = [];
 
   String _codeLang = 'javascript';
   bool _isLoading = false;
   bool _allowUserEditing = false;
   String? _selectedProfileId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfiles();
+  }
+
+  Future<void> _fetchProfiles() async {
+    try {
+      final appwriteService = context.read<AppwriteService>();
+      final user = await appwriteService.getUser();
+      if (user != null) {
+        final response = await appwriteService.getUserProfiles(ownerId: user.$id);
+        setState(() {
+          _profiles = response.rows.map((row) => Profile.fromMap(row.data, row.$id)).toList();
+        });
+      }
+    } catch (e) {
+      _showSnackbar('Error fetching profiles: $e');
+    }
+  }
 
   // Simple markdown-style toolbar actions
   void _wrapSelection(String prefix, [String? suffix]) {
@@ -112,6 +135,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           'content': _codeController.text,
         }),
         'file_ids': uploadedFileIds,
+        'profile_id': _selectedProfileId,
       };
 
       // Show the WhereToPostScreen as a modal bottom sheet
@@ -418,11 +442,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   });
                 }
               : null,
-          items: <String>['profile1', 'profile2', 'profile3', 'profile4']
-              .map<DropdownMenuItem<String>>((String value) {
+          items: _profiles.map<DropdownMenuItem<String>>((Profile profile) {
             return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
+              value: profile.id,
+              child: Text(profile.name),
             );
           }).toList(),
         ),
