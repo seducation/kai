@@ -564,4 +564,14 @@ class AppwriteService {
       tableId: productsCollection,
     );
   }
+
+  Future<models.RowList> getProductsByProfile(String profileId) async {
+    return _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: productsCollection,
+      queries: [
+        Query.equal('profile_id', profileId),
+      ],
+    );
+  }
 }

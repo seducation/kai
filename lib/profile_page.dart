@@ -368,7 +368,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       PodcastsTab(profileId: widget.profileId),
     ];
     if (profile != null && profile.type == 'business') {
-      baseTabViews.add(ProductsTab(profileId: profile.id));
+      baseTabViews.add(ProductsTab(profileId: widget.profileId));
     }
     baseTabViews.add(AboutTab(profileId: widget.profileId));
     return baseTabViews;
