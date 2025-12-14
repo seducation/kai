@@ -596,8 +596,7 @@ class AppwriteService {
         'name': name,
         'isCollaborative': isCollaborative,
         'profile_id': profileId,
-        'post_id': postId, // Satisfy the required attribute
-        'post_ids': [postId], // Also use the new 'post_ids' array
+        'post_ids': [postId], // Use the new 'post_ids' array
       },
       permissions: [
         Permission.read(Role.any()),
