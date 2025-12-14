@@ -388,6 +388,14 @@ class AppwriteService {
     );
   }
 
+  Future<void> deletePost(String postId) async {
+    await _db.deleteRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: postsCollection,
+      rowId: postId,
+    );
+  }
+
   Future<models.RowList> getComments(String postId) async {
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
