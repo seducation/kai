@@ -174,7 +174,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'pdf', 'doc', 'png'], // Example extensions
+        allowedExtensions: ['jpg', 'pdf', 'doc', 'png', 'mp4', 'mov', 'avi'], // Example extensions
         withData: true, // This is crucial for web and cross-platform uploads
       );
 
@@ -519,7 +519,7 @@ class FileUploadArea extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const Text(
-                'Supported formats: JPG, PNG, PDF, DOC',
+                'Supported formats: JPG, PNG, PDF, DOC, MP4, MOV, AVI',
                 style: TextStyle(
                   color: Colors.blueGrey,
                   fontSize: 12,
