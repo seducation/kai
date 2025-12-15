@@ -41,10 +41,7 @@ class _WhereToPostStoryScreenState extends State<WhereToPostStoryScreen> {
     try {
       final appwriteService = context.read<AppwriteService>();
       final response = await appwriteService.getUserProfiles(ownerId: userId);
-      return response.rows
-          .map((row) => Profile.fromRow(row))
-          .where((profile) => profile.type == 'user' || profile.type == 'channel')
-          .toList();
+      return response.rows.map((row) => Profile.fromRow(row)).toList();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

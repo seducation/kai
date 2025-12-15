@@ -22,9 +22,10 @@ class StatusRailSection extends StatefulWidget {
 
 class _StatusRailSectionState extends State<StatusRailSection> {
   bool _isLoading = true;
-  List<Profile> _profiles = [];
+  List<Profile> _profilesWithStories = [];
   Profile? _currentUserProfile;
-  Map<String, List<Story>> _stories = {};
+  List<Story> _currentUserStories = [];
+  Map<String, List<Story>> _storiesMap = {};
 
   @override
   void initState() {
@@ -44,27 +45,44 @@ class _StatusRailSectionState extends State<StatusRailSection> {
       final user = await authService.getCurrentUser();
 
       if (user != null && mounted) {
+        // Fetch current user's profile
         final userProfiles = await appwriteService.getUserProfiles(ownerId: user.id);
         if (userProfiles.rows.isNotEmpty) {
           _currentUserProfile = Profile.fromRow(userProfiles.rows.first);
         }
 
+        // Fetch profiles of users the current user is following
         final followingProfiles = await appwriteService.getFollowingProfiles(userId: user.id);
-        _profiles = followingProfiles.rows.map((row) => Profile.fromRow(row)).toList();
+        final followedProfiles = followingProfiles.rows.map((row) => Profile.fromRow(row)).toList();
 
-        final profileIds = _profiles.map((p) => p.id).toList();
+        // Create a list of all profile IDs to fetch stories for
+        final profileIds = followedProfiles.map((p) => p.id).toList();
         if (_currentUserProfile != null) {
-          profileIds.insert(0, _currentUserProfile!.id);
+          profileIds.add(_currentUserProfile!.id);
         }
 
-        final storiesResponse = await appwriteService.getStories(profileIds);
-        final stories = storiesResponse.rows.map((row) => Story.fromRow(row)).toList();
+        // Fetch all stories
+        if (profileIds.isNotEmpty) {
+          final storiesResponse = await appwriteService.getStories(profileIds);
+          final allStories = storiesResponse.rows.map((row) => Story.fromRow(row)).toList();
 
-        final storiesMap = <String, List<Story>>{};
-        for (final story in stories) {
-          storiesMap.putIfAbsent(story.profileId, () => []).add(story);
+          // Group stories by profile ID
+          final storiesMap = <String, List<Story>>{};
+          for (final story in allStories) {
+            storiesMap.putIfAbsent(story.profileId, () => []).add(story);
+          }
+          _storiesMap = storiesMap;
+
+          // Filter followed profiles to only include those with stories
+          _profilesWithStories = followedProfiles
+              .where((profile) => _storiesMap.containsKey(profile.id) && _storiesMap[profile.id]!.isNotEmpty)
+              .toList();
+
+          // Get the current user's stories
+          if (_currentUserProfile != null) {
+            _currentUserStories = _storiesMap[_currentUserProfile!.id] ?? [];
+          }
         }
-        _stories = storiesMap;
       }
     } catch (e) {
       // Handle error
@@ -79,7 +97,7 @@ class _StatusRailSectionState extends State<StatusRailSection> {
 
   @override
   Widget build(BuildContext context) {
-    final hasStory = _currentUserProfile != null && _stories.containsKey(_currentUserProfile!.id);
+    final hasCurrentUserStory = _currentUserStories.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,37 +115,49 @@ class _StatusRailSectionState extends State<StatusRailSection> {
         const SizedBox(height: 12),
         SizedBox(
           height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _isLoading ? 5 : 1 + _profiles.length,
-            itemBuilder: (context, index) {
-              if (_isLoading) {
-                return const ShimmerCirclePlaceholder();
-              }
-
-              if (index == 0) {
-                return AddToStoryWidget(
-                  hasStory: hasStory,
-                  onTap: () {
-                    if (hasStory) {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => StoryViewScreen(
-                          stories: _stories[_currentUserProfile!.id]!,
-                          profile: _currentUserProfile!,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                if (_isLoading)
+                  const ShimmerCirclePlaceholder()
+                else
+                  AddToStoryWidget(
+                    profile: _currentUserProfile,
+                    hasStory: hasCurrentUserStory,
+                    onTap: () {
+                      if (hasCurrentUserStory) {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (context) => StoryViewScreen(
+                            stories: _currentUserStories,
+                            profile: _currentUserProfile!,
+                          ),
+                        ));
+                      } else {
+                        context.go('/add_to_story');
+                      }
+                    },
+                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _isLoading
+                      ? ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: 5, // Placeholder count
+                          itemBuilder: (context, index) => const ShimmerCirclePlaceholder(),
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _profilesWithStories.length,
+                          itemBuilder: (context, index) {
+                            final profile = _profilesWithStories[index];
+                            final stories = _storiesMap[profile.id] ?? <Story>[];
+                            return StatusItemWidget(profile: profile, stories: stories);
+                          },
                         ),
-                      ));
-                    } else {
-                      context.go('/add_to_story');
-                    }
-                  },
-                );
-              }
-
-              final profile = _profiles[index - 1];
-              final stories = _stories[profile.id] ?? [];
-              return StatusItemWidget(profile: profile, stories: stories);
-            },
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -136,22 +166,24 @@ class _StatusRailSectionState extends State<StatusRailSection> {
 }
 
 class AddToStoryWidget extends StatelessWidget {
+  final Profile? profile;
   final bool hasStory;
   final VoidCallback onTap;
 
   const AddToStoryWidget({
     super.key,
+    this.profile,
     required this.hasStory,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final appwriteService = context.read<AppwriteService>();
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 80,
-        margin: const EdgeInsets.only(right: 12),
         child: Column(
           children: [
             Stack(
@@ -160,12 +192,19 @@ class AddToStoryWidget extends StatelessWidget {
                 CircleAvatar(
                   radius: 35,
                   backgroundColor: Colors.grey,
+                  backgroundImage: (profile?.profileImageUrl != null && hasStory)
+                      ? NetworkImage(appwriteService.getFileViewUrl(profile!.profileImageUrl!))
+                      : null,
                 ),
                 if (hasStory)
-                  const Icon(Icons.check_circle, color: Colors.green, size: 24)
+                  const CircleAvatar(
+                    radius: 37,
+                    backgroundColor: Colors.transparent,
+                    child: Icon(Icons.check_circle, color: Colors.green, size: 24),
+                  )
                 else
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
                     ),
@@ -178,12 +217,12 @@ class AddToStoryWidget extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Add to Story',
+            Text(
+              hasStory ? 'Your Story' : 'Add to Story',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
