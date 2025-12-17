@@ -14,6 +14,7 @@ import 'package:my_app/tabs/products_tab.dart';
 import 'package:my_app/tabs/shorts_tab.dart';
 import 'package:my_app/tabs/videos_tab.dart';
 import 'package:my_app/widgets/edit_profile_fab.dart';
+import 'package:my_app/widgets/more_options_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -326,7 +327,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                                           const SizedBox(width: 8),
                                           ElevatedButton(
                                             onPressed: () {
-                                            
+                                              _showMoreOptions(context);
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.grey[200],
@@ -409,6 +410,15 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
               ],
             )
           : null,
+    );
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return const MoreOptionsModal();
+      },
     );
   }
 
