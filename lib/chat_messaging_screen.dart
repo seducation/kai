@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/appwrite_service.dart';
-import 'package:my_app/chat_call_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/widgets/chat_app_bar.dart';
 import 'package:appwrite/appwrite.dart';
@@ -190,10 +189,8 @@ class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
         title: _profileName,
         onOff: widget.chat.isOnline ? "Online" : "Offline",
         onCallPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const Panggilan()),
-          );
+          final roomName = _getChatId(_currentUser!.$id, _receiverOwnerId!);
+          context.push('/outgoing_call/$roomName');
         },
         onProfileTap: () {
           context.push('/profile_page/${widget.chat.userId}');

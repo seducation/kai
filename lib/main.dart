@@ -3,6 +3,9 @@ import 'package:camera/camera.dart'; // Added camera import
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/calls/answering_screen.dart';
+import 'package:my_app/calls/incoming_call_screen.dart';
+import 'package:my_app/calls/outgoing_call_screen.dart';
 import 'package:my_app/chat_screen.dart';
 import 'package:my_app/environment.dart';
 import 'package:my_app/profile_page.dart';
@@ -158,6 +161,24 @@ GoRouter _createRouter(AuthService authService) {
         builder: (context, state) => ProfilePageScreen(
           key: state.pageKey,
           profileId: state.pathParameters['id']!,
+        ),
+      ),
+       GoRoute(
+        path: '/outgoing_call/:roomName',
+        builder: (context, state) => OutgoingCallScreen(
+          roomName: state.pathParameters['roomName']!,
+        ),
+      ),
+      GoRoute(
+        path: '/incoming_call/:roomName',
+        builder: (context, state) => IncomingCallScreen(
+          roomName: state.pathParameters['roomName']!,
+        ),
+      ),
+      GoRoute(
+        path: '/answering_call/:roomName',
+        builder: (context, state) => AnsweringScreen(
+          roomName: state.pathParameters['roomName']!,
         ),
       ),
       GoRoute(
