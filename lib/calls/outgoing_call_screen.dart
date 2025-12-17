@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:my_app/appwrite_service.dart';
@@ -31,7 +32,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
         _room = room;
       });
     } catch (e) {
-      // Handle connection error
+      log('Error connecting to room: $e');
     }
   }
 

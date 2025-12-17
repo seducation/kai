@@ -41,10 +41,13 @@ class AppwriteService {
 
     try {
       final result = await _functions.createExecution(
-        functionId: 'function-generate-livekit-token',
+        functionId: 'generate-livekit-token',
         body: '{"roomName": "$roomName", "userId": "${user.$id}"}',
       );
       final response = jsonDecode(result.responseBody);
+      if (response.containsKey('error')) {
+        throw AppwriteException(response['error']);
+      }
       return response['token'];
     } on AppwriteException catch (e) {
       log('Error getting LiveKit token: ${e.message}');
