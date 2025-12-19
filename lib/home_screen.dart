@@ -45,7 +45,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _initializeController() {
     _tabKeys = List.generate(_tabs.length, (_) => GlobalKey());
-    _mainTabController = TabController(length: _tabs.length, vsync: this);
+    _mainTabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: 1,
+    );
   }
 
   void _recreateController(VoidCallback fn) {
@@ -94,204 +98,217 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: _mainTabController,
       builder: (context, child) {
-        if (!_mainTabController.indexIsChanging) {
-          final tabIndex = _mainTabController.index;
-          if (tabIndex > 0) {
-            final key = _tabKeys[tabIndex];
-            final context = key.currentContext;
-            if (context != null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  alignment: 0.5,
-                );
-              });
+        return PopScope(
+          canPop: _mainTabController.index == 1,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (_mainTabController.index != 1) {
+              _mainTabController.animateTo(1);
             }
-          }
-        }
-
-        final theme = Theme.of(context);
-        final selectedColor =
-            theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface;
-        final unselectedColor = theme.unselectedWidgetColor;
-
-        final tabBarWidget = Row(
-          children: [
-            InkWell(
-              onTap: () => _mainTabController.animateTo(0),
-              child: Container(
-                key: _tabKeys[0],
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                alignment: Alignment.center,
-                child: Text(
-                  'shorts',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: _mainTabController.index == 0
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: _mainTabController.index == 0
-                        ? selectedColor
-                        : unselectedColor,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 2.0,
-                        color: Colors.black.withAlpha(128),
-                        offset: const Offset(1.0, 1.0),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(_tabs.length - 1, (index) {
-                    final tabIndex = index + 1;
-                    final isSelected = _mainTabController.index == tabIndex;
-                    return InkWell(
-                      onTap: () => _mainTabController.animateTo(tabIndex),
-                      child: Container(
-                        key: _tabKeys[tabIndex],
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _tabs[tabIndex],
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isSelected ? selectedColor : unselectedColor,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 2.0,
-                                color: Colors.black.withAlpha(128),
-                                offset: const Offset(1.0, 1.0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ),
-          ],
+          },
+          child: _buildScaffold(context),
         );
-
-        final tabBarView = TabBarView(
-          controller: _mainTabController,
-          dragStartBehavior: DragStartBehavior.start,
-          children: _tabs.map<Widget>((name) {
-            if (name == 'search tools') {
-              // The reorderable part of the list excludes the first 2 tabs.
-              final reorderableTabs = _tabs.sublist(2);
-              return TabManagerScreen(
-                tabs: reorderableTabs,
-                onReorder: _onReorder,
-                onAddTab: _onAddTab,
-              );
-            } else if (name == 'chats') {
-              return const ChatsScreen();
-            } else if (name == 'shorts') {
-              return const HMVShortsTabscreen();
-            } else if (name == 'feature') {
-              return const HMVFeaturesTabscreen();
-            } else if (name == 'videos') {
-              return const HMVVideosTabscreen();
-            } else if (name == 'news') {
-              return const HMVNewsTabscreen();
-            } else if (name == 'following') {
-              return const HMVFollowingTabscreen();
-            } else {
-              return Center(child: Text(name));
-            }
-          }).toList(),
-        );
-
-        if (_mainTabController.index == 0) {
-          return Scaffold(
-            extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              automaticallyImplyLeading: false,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.black.withAlpha(179), Colors.transparent],
-                  ),
-                ),
-              ),
-              title: SizedBox(height: kToolbarHeight, child: tabBarWidget),
-              titleSpacing: 0,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () => context.push('/search'),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    context.push('/add_post');
-                  },
-                ),
-              ],
-            ),
-            body: tabBarView,
-          );
-        } else {
-          final String currentTitle = (_mainTabController.index < 2)
-              ? 'gvone'
-              : _tabs[_mainTabController.index];
-          final appBar = AppBar(
-            leadingWidth: 112,
-            leading: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: () {
-                    context.push('/profile');
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined),
-                  tooltip: 'Shop',
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            title: Text(currentTitle),
-            centerTitle: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () => context.push('/bottom_nav_search'),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () {
-                  context.push('/add_post');
-                },
-              ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(kToolbarHeight),
-              child: ClipRect(
-                child: SizedBox(height: kToolbarHeight, child: tabBarWidget),
-              ),
-            ),
-          );
-          return Scaffold(appBar: appBar, body: tabBarView);
-        }
       },
     );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    if (!_mainTabController.indexIsChanging) {
+      final tabIndex = _mainTabController.index;
+      if (tabIndex > 0) {
+        final key = _tabKeys[tabIndex];
+        final context = key.currentContext;
+        if (context != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Scrollable.ensureVisible(
+              context,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              alignment: 0.5,
+            );
+          });
+        }
+      }
+    }
+
+    final theme = Theme.of(context);
+    final selectedColor =
+        theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface;
+    final unselectedColor = theme.unselectedWidgetColor;
+
+    final tabBarWidget = Row(
+      children: [
+        InkWell(
+          onTap: () => _mainTabController.animateTo(0),
+          child: Container(
+            key: _tabKeys[0],
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            alignment: Alignment.center,
+            child: Text(
+              'shorts',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: _mainTabController.index == 0
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+                color: _mainTabController.index == 0
+                    ? selectedColor
+                    : unselectedColor,
+                shadows: [
+                  Shadow(
+                    blurRadius: 2.0,
+                    color: Colors.black.withAlpha(128),
+                    offset: const Offset(1.0, 1.0),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(_tabs.length - 1, (index) {
+                final tabIndex = index + 1;
+                final isSelected = _mainTabController.index == tabIndex;
+                return InkWell(
+                  onTap: () => _mainTabController.animateTo(tabIndex),
+                  child: Container(
+                    key: _tabKeys[tabIndex],
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _tabs[tabIndex],
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isSelected ? selectedColor : unselectedColor,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black.withAlpha(128),
+                            offset: const Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final tabBarView = TabBarView(
+      controller: _mainTabController,
+      dragStartBehavior: DragStartBehavior.start,
+      children: _tabs.map<Widget>((name) {
+        if (name == 'search tools') {
+          // The reorderable part of the list excludes the first 2 tabs.
+          final reorderableTabs = _tabs.sublist(2);
+          return TabManagerScreen(
+            tabs: reorderableTabs,
+            onReorder: _onReorder,
+            onAddTab: _onAddTab,
+          );
+        } else if (name == 'chats') {
+          return const ChatsScreen();
+        } else if (name == 'shorts') {
+          return const HMVShortsTabscreen();
+        } else if (name == 'feature') {
+          return const HMVFeaturesTabscreen();
+        } else if (name == 'videos') {
+          return const HMVVideosTabscreen();
+        } else if (name == 'news') {
+          return const HMVNewsTabscreen();
+        } else if (name == 'following') {
+          return const HMVFollowingTabscreen();
+        } else {
+          return Center(child: Text(name));
+        }
+      }).toList(),
+    );
+
+    if (_mainTabController.index == 0) {
+      return Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black.withAlpha(179), Colors.transparent],
+              ),
+            ),
+          ),
+          title: SizedBox(height: kToolbarHeight, child: tabBarWidget),
+          titleSpacing: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => context.push('/search'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                context.push('/add_post');
+              },
+            ),
+          ],
+        ),
+        body: tabBarView,
+      );
+    } else {
+      final String currentTitle = (_mainTabController.index < 2)
+          ? 'gvone'
+          : _tabs[_mainTabController.index];
+      final appBar = AppBar(
+        leadingWidth: 112,
+        leading: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                context.push('/profile');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_cart_outlined),
+              tooltip: 'Shop',
+              onPressed: () {},
+            ),
+          ],
+        ),
+        title: Text(currentTitle),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/bottom_nav_search'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              context.push('/add_post');
+            },
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: ClipRect(
+            child: SizedBox(height: kToolbarHeight, child: tabBarWidget),
+          ),
+        ),
+      );
+      return Scaffold(appBar: appBar, body: tabBarView);
+    }
   }
 }

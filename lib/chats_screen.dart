@@ -68,6 +68,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 5,
+      initialIndex: 2,
       child: Scaffold(
         appBar: AppBar(
           leading: Row(
