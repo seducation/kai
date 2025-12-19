@@ -270,45 +270,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final String currentTitle = (_mainTabController.index < 2)
           ? 'gvone'
           : _tabs[_mainTabController.index];
-      final appBar = AppBar(
-        leadingWidth: 112,
-        leading: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                context.push('/profile');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined),
-              tooltip: 'Shop',
-              onPressed: () {},
-            ),
-          ],
-        ),
-        title: Text(currentTitle),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/bottom_nav_search'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              context.push('/add_post');
-            },
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: ClipRect(
-            child: SizedBox(height: kToolbarHeight, child: tabBarWidget),
-          ),
+
+      return Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return <Widget>[
+              SliverAppBar(
+                leadingWidth: 112,
+                leading: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () {
+                        context.push('/profile');
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.shopping_cart_outlined),
+                      tooltip: 'Shop',
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+                title: Text(currentTitle),
+                centerTitle: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () => context.push('/bottom_nav_search'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      context.push('/add_post');
+                    },
+                  ),
+                ],
+                floating: true,
+                snap: true,
+                pinned: false,
+                elevation: 0,
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(kToolbarHeight),
+                  child: ClipRect(
+                    child: SizedBox(
+                      height: kToolbarHeight,
+                      child: tabBarWidget,
+                    ),
+                  ),
+                ),
+              ),
+            ];
+          },
+          body: tabBarView,
         ),
       );
-      return Scaffold(appBar: appBar, body: tabBarView);
     }
   }
 }
