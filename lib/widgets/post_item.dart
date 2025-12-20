@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/comments_screen.dart';
 import 'package:my_app/model/post.dart';
+import 'package:my_app/model/profile.dart';
 import 'package:my_app/profile_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,7 +74,7 @@ class _PostItemState extends State<PostItem> {
   Future<void> _fetchAuthorName() async {
     if (widget.post.originalAuthor != null) {
       try {
-        final authorProfile = await _appwriteService.getProfile(widget.post.originalAuthor!.id);
+        final Profile authorProfile = await _appwriteService.getProfile(widget.post.originalAuthor!.id);
         if (mounted) {
           setState(() {
             _authorName = authorProfile.name;
