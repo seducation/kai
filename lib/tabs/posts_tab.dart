@@ -94,7 +94,7 @@ class _PostsTabState extends State<PostsTab> {
           type: postType,
           stats: postStats,
           linkUrl: row.data['linkUrl'],
-          linkTitle: row.data['linkTitle'],
+          linkTitle: row.data['titles'],
         );
       }).where((post) => post != null).cast<Post>().toList();
 
