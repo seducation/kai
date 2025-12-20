@@ -30,6 +30,7 @@ class _PostItemState extends State<PostItem> {
   late AppwriteService _appwriteService;
   SharedPreferences? _prefs;
   VideoPlayerController? _controller;
+  String? _authorName;
 
   @override
   void initState() {
@@ -60,11 +61,27 @@ class _PostItemState extends State<PostItem> {
   Future<void> _initializeState() async {
     _prefs = await SharedPreferences.getInstance();
     _fetchCommentCount();
+    _fetchAuthorName();
     if(mounted){
       setState(() {
         _isLiked = _prefs?.getBool(widget.post.id) ?? false;
         _isSaved = _prefs?.getBool('saved_${widget.post.id}') ?? false;
       });
+    }
+  }
+
+  Future<void> _fetchAuthorName() async {
+    if (widget.post.originalAuthor != null) {
+      try {
+        final authorProfile = await _appwriteService.getProfile(widget.post.originalAuthor!.id);
+        if (mounted) {
+          setState(() {
+            _authorName = authorProfile.name;
+          });
+        }
+      } catch (e) {
+        // Handle error if needed
+      }
     }
   }
 
@@ -280,19 +297,24 @@ class _PostItemState extends State<PostItem> {
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                       ),
                       if (widget.post.originalAuthor != null)
-                        Row(
-                          children: [
-                            const SizedBox(width: 4),
-                            Text(
-                              'by',
-                              style: TextStyle(color: handleColor, fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.post.originalAuthor!.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-                            ),
-                          ],
+                        Flexible(
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 4),
+                              Text(
+                                'by',
+                                style: TextStyle(color: handleColor, fontSize: 14),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _authorName ?? widget.post.originalAuthor!.id,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                     ],
                   ),
