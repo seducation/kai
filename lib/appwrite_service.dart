@@ -286,7 +286,7 @@ class AppwriteService {
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
       tableId: profilesCollection,
-      queries: [Query.equal('followers', userId)],
+      queries: [Query.equal('followers', [userId])],
     );
   }
 
