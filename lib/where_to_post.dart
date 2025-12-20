@@ -121,15 +121,11 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
     });
 
     try {
-      final postFutures = _selectedProfileIds.map((profileId) {
-        final postData = {
-          ...widget.postData,
-          'profile_id': profileId, 
-        };
-        return appwriteService.createPost(postData);
-      });
-
-      await Future.wait(postFutures);
+      final postData = {
+        ...widget.postData,
+        'profile_id': _selectedProfileIds,
+      };
+      await appwriteService.createPost(postData);
 
       if (mounted) {
         scaffoldMessenger.showSnackBar(
@@ -140,7 +136,7 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
     } on AppwriteException catch (e) {
       if (mounted) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Failed to create one or more posts: ${e.message}')),
+          SnackBar(content: Text('Failed to create post: ${e.message}')),
         );
       }
     } finally {
