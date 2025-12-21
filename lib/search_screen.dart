@@ -77,7 +77,6 @@ class _SearchScreenState extends State<SearchScreen> {
         _suggestions = results.rows;
         _isLoading = false;
       });
-      _addToHistory(query);
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -91,15 +90,16 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _addToHistory(String query) {
-    if (!_searchHistory.contains(query)) {
-      setState(() {
-        _searchHistory.insert(0, query);
-        if (_searchHistory.length > 10) {
-          _searchHistory.removeLast();
-        }
-      });
-      _saveSearchHistory();
-    }
+    setState(() {
+      if (_searchHistory.contains(query)) {
+        _searchHistory.remove(query);
+      }
+      _searchHistory.insert(0, query);
+      if (_searchHistory.length > 10) {
+        _searchHistory.removeLast();
+      }
+    });
+    _saveSearchHistory();
   }
 
   void _submitSearch(String query) {
