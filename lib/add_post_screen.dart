@@ -32,6 +32,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _isLoading = false;
   bool _allowUserEditing = false;
   String? _selectedProfileId;
+  bool _allowPostSettings = false;
 
   @override
   void initState() {
@@ -295,6 +296,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
               const SizedBox(height: 16),
 
               _buildAuthoreIdSection(),
+              const SizedBox(height: 16),
+              _buildPostSettingsSection(),
             ],
           ),
         ), // Scaffold
@@ -502,6 +505,59 @@ class _AddPostScreenState extends State<AddPostScreen> {
         TextField(
           // This text field is also controlled by the same switch
           enabled: _allowUserEditing,
+          decoration: const InputDecoration(
+            labelText: 'Add Collaboration',
+            border: OutlineInputBorder(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPostSettingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Post Settings'),
+            Switch(
+              value: _allowPostSettings,
+              onChanged: (value) {
+                setState(() {
+                  _allowPostSettings = value;
+                });
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedProfileId,
+          decoration: const InputDecoration(
+            labelText: 'Overall Profile ID',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: _allowPostSettings
+              ? (String? newValue) {
+                  setState(() {
+                    if (newValue != null) {
+                      _selectedProfileId = newValue;
+                    }
+                  });
+                }
+              : null,
+          items: _profiles.map<DropdownMenuItem<String>>((Profile profile) {
+            return DropdownMenuItem<String>(
+              value: profile.id,
+              child: Text(profile.name),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          enabled: _allowPostSettings,
           decoration: const InputDecoration(
             labelText: 'Add Collaboration',
             border: OutlineInputBorder(),
