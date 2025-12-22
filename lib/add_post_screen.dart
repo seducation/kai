@@ -520,7 +520,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final List<String> postSettingOptions = [
       'NSFW',
       'Do not allow to share in different platform',
-      'Hide Profile'
+      'friends'
     ];
 
     return Column(
@@ -558,6 +558,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           ),
           if (_selectedPostSettings.isNotEmpty) const SizedBox(height: 16),
           DropdownButtonFormField<String>(
+            key: UniqueKey(),
             hint: const Text('Select Setting'),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
