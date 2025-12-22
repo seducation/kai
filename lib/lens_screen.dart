@@ -129,7 +129,7 @@ class _LensScreenState extends State<LensScreen> {
         controller: _scrollController,
         slivers: [
           SliverAppBar(
-            title: const Text('Lens'),
+            title: const Text('gvone'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),

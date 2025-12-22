@@ -148,7 +148,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
         }),
         'file_ids': uploadedFileIds,
         'profile_id': _selectedProfileId,
-        'post_settings': _selectedPostSettings,
+        'is_nsfw': _selectedPostSettings.contains('NSFW'),
+        'allow_share':
+            !_selectedPostSettings.contains('Do not allow to share in different platform'),
+        'friends': _selectedPostSettings.contains('friends'),
       };
 
       if (_allowUserEditing && _selectedProfileId != null) {
