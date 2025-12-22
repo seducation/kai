@@ -32,7 +32,7 @@ class _PostsTabState extends State<PostsTab> {
     });
     try {
       final results = await Future.wait([
-        _appwriteService.getPostsFromUsers([widget.profileId]),
+        _appwriteService.getPostsFromUsers([widget.profileId], includeHidden: true),
         _appwriteService.getProfiles(),
       ]);
 
