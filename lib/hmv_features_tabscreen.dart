@@ -48,6 +48,11 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
       final profilesMap = {for (var p in profilesResponse.rows) p.$id: Profile.fromMap(p.data, p.$id)};
 
       final posts = postsResponse.rows.map((row) {
+        final isHidden = row.data['isHidden'] as bool? ?? false;
+        if (isHidden) {
+          return null;
+        }
+
         final profileIds = row.data['profile_id'] as List?;
         final profileId = (profileIds?.isNotEmpty ?? false) ? profileIds!.first as String? : null;
         final author = profilesMap[profileId];

@@ -88,6 +88,11 @@ class _SrvFollowingTabscreenState extends State<SrvFollowingTabscreen> {
 
       // 7. Map the post data to Post objects
       final posts = postsResponse.rows.map((row) {
+        final isHidden = row.data['isHidden'] as bool? ?? false;
+        if (isHidden) {
+          return null;
+        }
+
         // Handle array for profile_id
         final profileIdsList = row.data['profile_id'] as List?;
         final postAuthorProfileId = (profileIdsList?.isNotEmpty ?? false) ? profileIdsList!.first as String? : null;

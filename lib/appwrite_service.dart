@@ -426,15 +426,18 @@ class AppwriteService {
     }
   }
 
-  Future<models.RowList> getPostsFromUsers(List<dynamic> profileIds) async {
+  Future<models.RowList> getPostsFromUsers(List<dynamic> profileIds, {bool includeHidden = false}) async {
+    final queries = [
+      Query.equal('profile_id', profileIds),
+      Query.equal('status', 'active'),
+    ];
+    if (!includeHidden) {
+      queries.add(Query.equal('isHidden', false));
+    }
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
       tableId: postsCollection,
-      queries: [
-        Query.equal('profile_id', profileIds),
-        Query.equal('isHidden', false),
-        Query.equal('status', 'active'),
-      ],
+      queries: queries,
     );
   }
 
