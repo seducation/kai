@@ -1,8 +1,10 @@
+import 'package:appwrite/models.dart' as models;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/comments_screen.dart';
 import 'package:my_app/model/post.dart';
+import 'package:my_app/model/profile.dart';
 import 'package:my_app/profile_page.dart';
 import 'package:my_app/widgets/post_options_menu.dart';
 import 'package:provider/provider.dart';
@@ -187,29 +189,63 @@ class _PostItemState extends State<PostItem> {
           children: [
             if (widget.post.profileIds != null)
               ...widget.post.profileIds!.map((profileId) {
-                return ListTile(
-                  title: Text('Profile ID: $profileId'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfilePageScreen(profileId: profileId),
-                      ),
-                    );
+                return FutureBuilder<models.Row>(
+                  future: _appwriteService.getProfile(profileId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      final profile = Profile.fromRow(snapshot.data!);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: CachedNetworkImageProvider(
+                              profile.profileImageUrl ?? ''),
+                        ),
+                        title: Text(profile.name),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfilePageScreen(profileId: profileId),
+                            ),
+                          );
+                        },
+                      );
+                    } else {
+                      return ListTile(
+                        title: Text('Loading...'),
+                      );
+                    }
                   },
                 );
               }),
             if (widget.post.authorIds != null)
               ...widget.post.authorIds!.map((authorId) {
-                return ListTile(
-                  title: Text('Author ID: $authorId'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfilePageScreen(profileId: authorId),
-                      ),
-                    );
+                return FutureBuilder<models.Row>(
+                  future: _appwriteService.getProfile(authorId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      final profile = Profile.fromRow(snapshot.data!);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: CachedNetworkImageProvider(
+                              profile.profileImageUrl ?? ''),
+                        ),
+                        title: Text(profile.name),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfilePageScreen(profileId: authorId),
+                            ),
+                          );
+                        },
+                      );
+                    } else {
+                      return ListTile(
+                        title: Text('Loading...'),
+                      );
+                    }
                   },
                 );
               }),
@@ -596,7 +632,7 @@ class _PostItemState extends State<PostItem> {
 
   String _formatCount(int count) {
     if (count >= 1000) {
-      return "${(count / 1000).toStringAsFixed(1)}k";
+      return '${(count / 1000).toStringAsFixed(1)}k';
     }
     return count.toString();
   }
