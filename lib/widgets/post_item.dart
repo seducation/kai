@@ -64,7 +64,10 @@ class _PostItemState extends State<PostItem> {
 
   Future<void> _initializeState() async {
     _prefs = await SharedPreferences.getInstance();
-    _fetchCommentCount();
+    final user = await _appwriteService.getUser();
+    if (user != null) {
+      _fetchCommentCount();
+    }
     if (mounted) {
       setState(() {
         _isLiked = _prefs?.getBool(widget.post.id) ?? false;

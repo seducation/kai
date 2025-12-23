@@ -28,14 +28,16 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
   List<Post> _posts = [];
   bool _isLoading = true;
   String? _profileId;
+  bool _isInitialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
       _appwriteService = context.read<AppwriteService>();
       _fetchData();
-    });
+      _isInitialized = true;
+    }
   }
 
   Future<void> _fetchData() async {

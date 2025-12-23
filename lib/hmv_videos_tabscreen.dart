@@ -38,6 +38,7 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
         userId: context.read<String>(),
         postType: 'video',
       );
+      _controller.loadFeed(); // Initial data fetch
       _isControllerInitialized = true;
     }
   }
@@ -106,6 +107,10 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
                   ],
                 ),
               );
+            }
+
+            if (controller.isLoading && controller.feedItems.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
             }
 
             if (!controller.isLoading && controller.feedItems.isEmpty) {
