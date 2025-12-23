@@ -68,7 +68,7 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
       );
 
       final profilesMap = {
-        for (var doc in profilesResponse.rows) doc.$id: doc.data,
+        for (var p in profilesResponse.rows) p.$id: Profile.fromMap(p.data, p.$id)
       };
 
       final posts = postsResponse.rows.map((row) {
@@ -92,15 +92,16 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
         final mainAuthorId = primaryProfileId ?? originalAuthorId;
 
         if (mainAuthorId == null) {
+           debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. No author or profile ID.');
           return null;
         }
 
-        final mainAuthorProfileData = profilesMap[mainAuthorId];
-        if (mainAuthorProfileData == null) {
+        final author = profilesMap[mainAuthorId];
+        if (author == null) {
+          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. Profile for ID $mainAuthorId not found in profilesMap.');
           return null;
         }
 
-        final author = Profile.fromMap(mainAuthorProfileData, mainAuthorId);
         final updatedAuthor = Profile(
             id: author.id,
             name: author.name,
@@ -117,11 +118,7 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
         if (primaryProfileId != null &&
             originalAuthorId != null &&
             primaryProfileId != originalAuthorId) {
-          final originalAuthorProfileData = profilesMap[originalAuthorId];
-          if (originalAuthorProfileData != null) {
-            finalOriginalAuthor =
-                Profile.fromMap(originalAuthorProfileData, originalAuthorId);
-          }
+          finalOriginalAuthor = profilesMap[originalAuthorId];
         }
 
         final fileIdsData = row.data['file_ids'];
