@@ -564,6 +564,11 @@ class AppwriteService {
     return '${Environment.appwritePublicEndpoint}/storage/buckets/${Environment.appwriteStorageBucketId}/files/$fileId/view?project=${Environment.appwriteProjectId}';
   }
 
+  Future<models.File> getFile(String fileId) async {
+    return _storage.getFile(
+        bucketId: Environment.appwriteStorageBucketId, fileId: fileId);
+  }
+
   Future<models.RowList> searchPosts({required String query}) async {
     final results = await Future.wait([
       _db.listRows(

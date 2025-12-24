@@ -71,115 +71,115 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
         for (var doc in profilesResponse.rows) doc.$id: doc.data,
       };
 
-      final posts = postsResponse.rows
-          .map((row) {
-            debugPrint('HmvVideosTabScreen: Processing post ${row.$id}');
+      final postFutures = postsResponse.rows.map((row) async {
+        debugPrint('HmvVideosTabScreen: Processing post ${row.$id}');
 
-            final profileIds = row.data['profile_id'] as List?;
-            if (profileIds == null || profileIds.isEmpty) {
-              debugPrint(
-                'HmvVideosTabScreen: Post ${row.$id} filtered. profile_id list is null or empty.',
-              );
-              return null;
-            }
-            final profileId = profileIds.first as String?;
-            if (profileId == null) {
-              debugPrint(
-                'HmvVideosTabScreen: Post ${row.$id} filtered. First profile_id in list is null.',
-              );
-              return null;
-            }
+        final profileIds = row.data['profile_id'] as List?;
+        if (profileIds == null || profileIds.isEmpty) {
+          debugPrint(
+            'HmvVideosTabScreen: Post ${row.$id} filtered. profile_id list is null or empty.',
+          );
+          return null;
+        }
+        final profileId = profileIds.first as String?;
+        if (profileId == null) {
+          debugPrint(
+            'HmvVideosTabScreen: Post ${row.$id} filtered. First profile_id in list is null.',
+          );
+          return null;
+        }
 
-            final creatorProfileData = profilesMap[profileId];
-            if (creatorProfileData == null) {
-              debugPrint(
-                'HmvVideosTabScreen: Post ${row.$id} filtered. Author profile for ID $profileId not found in profilesMap. profilesMap keys: ${profilesMap.keys.toList()}',
-              );
-              return null;
-            }
+        final creatorProfileData = profilesMap[profileId];
+        if (creatorProfileData == null) {
+          debugPrint(
+            'HmvVideosTabScreen: Post ${row.$id} filtered. Author profile for ID $profileId not found in profilesMap. profilesMap keys: ${profilesMap.keys.toList()}',
+          );
+          return null;
+        }
 
-            debugPrint(
-              'HmvVideosTabScreen: Post ${row.$id} passed all checks. Creating Post object.',
-            );
+        debugPrint(
+          'HmvVideosTabScreen: Post ${row.$id} passed all checks. Creating Post object.',
+        );
 
-            final author = Profile.fromMap(creatorProfileData, profileId);
+        final author = Profile.fromMap(creatorProfileData, profileId);
 
-            final updatedAuthor = Profile(
-              id: author.id,
-              name: author.name,
-              type: author.type,
-              bio: author.bio,
-              profileImageUrl:
-                  author.profileImageUrl != null &&
+        final updatedAuthor = Profile(
+          id: author.id,
+          name: author.name,
+          type: author.type,
+          bio: author.bio,
+          profileImageUrl:
+              author.profileImageUrl != null &&
                       author.profileImageUrl!.isNotEmpty
                   ? _appwriteService.getFileViewUrl(author.profileImageUrl!)
                   : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
-              ownerId: author.ownerId,
-              createdAt: author.createdAt,
+          ownerId: author.ownerId,
+          createdAt: author.createdAt,
+        );
+
+        final originalAuthorIds = row.data['author_id'] as List?;
+        final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false)
+            ? originalAuthorIds!.first as String?
+            : null;
+
+        Profile? originalAuthor;
+        if (originalAuthorId != null && originalAuthorId != profileId) {
+          final originalAuthorProfileData = profilesMap[originalAuthorId];
+          if (originalAuthorProfileData != null) {
+            originalAuthor = Profile.fromMap(
+              originalAuthorProfileData,
+              originalAuthorId,
             );
+          }
+        }
 
-            final originalAuthorIds = row.data['author_id'] as List?;
-            final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false)
-                ? originalAuthorIds!.first as String?
-                : null;
+        final fileIdsData = row.data['file_ids'];
+        final List<String> fileIds = fileIdsData is List
+            ? List<String>.from(fileIdsData.map((id) => id.toString()))
+            : [];
 
-            Profile? originalAuthor;
-            if (originalAuthorId != null && originalAuthorId != profileId) {
-              final originalAuthorProfileData = profilesMap[originalAuthorId];
-              if (originalAuthorProfileData != null) {
-                originalAuthor = Profile.fromMap(
-                  originalAuthorProfileData,
-                  originalAuthorId,
-                );
-              }
-            }
+        List<String> mediaUrls = [];
+        if (fileIds.isNotEmpty) {
+          mediaUrls = fileIds
+              .map((id) => _appwriteService.getFileViewUrl(id))
+              .toList();
+        }
 
-            final fileIdsData = row.data['file_ids'];
-            final List<String> fileIds = fileIdsData is List
-                ? List<String>.from(fileIdsData.map((id) => id.toString()))
-                : [];
+        String? postTypeString = row.data['type'];
+        final postType = await _getPostType(postTypeString, row.data['linkUrl'], fileIds);
 
-            List<String> mediaUrls = [];
-            if (fileIds.isNotEmpty) {
-              mediaUrls = fileIds
-                  .map((id) => _appwriteService.getFileViewUrl(id))
-                  .toList();
-            }
-            debugPrint('HmvVideosTabScreen: Post ${row.$id} mediaUrls: $mediaUrls');
+        debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
 
-            String? postTypeString = row.data['type'];
-            final postType = _getPostType(postTypeString, row.data['linkUrl'], mediaUrls);
+        final postStats = PostStats(
+          likes: row.data['likes'] ?? 0,
+          comments: row.data['comments'] ?? 0,
+          shares: row.data['shares'] ?? 0,
+          views: row.data['views'] ?? 0,
+        );
 
-            debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
-
-            final postStats = PostStats(
-              likes: row.data['likes'] ?? 0,
-              comments: row.data['comments'] ?? 0,
-              shares: row.data['shares'] ?? 0,
-              views: row.data['views'] ?? 0,
-            );
-
-            return Post(
-              id: row.$id,
-              author: updatedAuthor,
-              originalAuthor: originalAuthor,
-              timestamp:
-                  DateTime.tryParse(row.data['timestamp'] ?? '') ??
+        return Post(
+          id: row.$id,
+          author: updatedAuthor,
+          originalAuthor: originalAuthor,
+          timestamp:
+              DateTime.tryParse(row.data['timestamp'] ?? '') ??
                   DateTime.now(),
-              contentText: row.data['caption'] ?? '',
-              mediaUrls: mediaUrls,
-              type: postType,
-              stats: postStats,
-              linkUrl: row.data['linkUrl'],
-              linkTitle: row.data['titles'],
-              authorIds: (row.data['author_id'] as List<dynamic>?)
-                  ?.map((e) => e as String)
-                  .toList(),
-              profileIds: (row.data['profile_id'] as List<dynamic>?)
-                  ?.map((e) => e as String)
-                  .toList(),
-            );
-          })
+          contentText: row.data['caption'] ?? '',
+          mediaUrls: mediaUrls,
+          type: postType,
+          stats: postStats,
+          linkUrl: row.data['linkUrl'],
+          linkTitle: row.data['titles'],
+          authorIds: (row.data['author_id'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList(),
+          profileIds: (row.data['profile_id'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList(),
+        );
+      });
+
+      final posts = (await Future.wait(postFutures))
           .whereType<Post>()
           .where((post) => post.type == PostType.video)
           .toList();
@@ -210,20 +210,24 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
     }
   }
 
-  PostType _getPostType(String? type, String? linkUrl, List<String> mediaUrls) {
+  Future<PostType> _getPostType(String? type, String? linkUrl, List<String> fileIds) async {
     if (type == 'video') {
       return PostType.video;
     }
-    for (final url in mediaUrls) {
-      if (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.avi')) {
-        return PostType.video;
+    if (fileIds.isNotEmpty) {
+      try {
+        final file = await _appwriteService.getFile(fileIds.first);
+        if (file.mimeType.startsWith('video/')) {
+          return PostType.video;
+        }
+        return PostType.image;
+      } catch (e) {
+        debugPrint('Error fetching file metadata: $e');
+        return PostType.image; // Assume image if metadata fetch fails
       }
     }
     if (linkUrl != null && linkUrl.isNotEmpty) {
       return PostType.linkPreview;
-    }
-    if (mediaUrls.isNotEmpty) {
-      return PostType.image;
     }
     return PostType.text;
   }
