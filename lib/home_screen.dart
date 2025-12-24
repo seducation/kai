@@ -6,6 +6,7 @@ import 'hmv_following_tabscreen.dart';
 import 'hmv_news_tabscreen.dart';
 import 'hmv_shorts_tabscreen.dart';
 import 'hmv_videos_tabscreen.dart';
+import 'hmv_forum_tabscreen.dart';
 import 'chats_screen.dart';
 import 'tab_manager_screen.dart';
 
@@ -227,6 +228,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return const HMVNewsTabscreen();
         } else if (name == 'following') {
           return const HMVFollowingTabscreen();
+        } else if (name == 'forum') {
+          return const HmvForumTabscreen();
         } else {
           return Center(child: Text(name));
         }
