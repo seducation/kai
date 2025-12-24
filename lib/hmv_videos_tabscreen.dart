@@ -145,6 +145,7 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
                   .map((id) => _appwriteService.getFileViewUrl(id))
                   .toList();
             }
+            debugPrint('HmvVideosTabScreen: Post ${row.$id} mediaUrls: $mediaUrls');
 
             String? postTypeString = row.data['type'];
             final postType = _getPostType(postTypeString, row.data['linkUrl'], mediaUrls);
