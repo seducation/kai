@@ -3,6 +3,7 @@ import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/auth_service.dart';
 import 'package:my_app/model/post.dart';
 import 'package:my_app/widgets/add_to_playlist.dart';
+import 'package:my_app/provider/queue_provider.dart';
 import 'package:provider/provider.dart';
 
 class PostOptionsMenu extends StatelessWidget {
@@ -47,9 +48,20 @@ class PostOptionsMenu extends StatelessWidget {
                   leading: Icon(Icons.translate),
                   title: Text('Translate and Transcript'),
                 ),
-                const ListTile(
-                  leading: Icon(Icons.queue_play_next),
-                  title: Text('Add to Queue'),
+                ListTile(
+                  leading: const Icon(Icons.queue_play_next),
+                  title: const Text('Add to Queue'),
+                  onTap: () {
+                    final queueProvider = Provider.of<QueueProvider>(
+                      context,
+                      listen: false,
+                    );
+                    queueProvider.addToQueue(post.id, post.contentText);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Added to Queue')),
+                    );
+                  },
                 ),
                 ListTile(
                   leading: Icon(

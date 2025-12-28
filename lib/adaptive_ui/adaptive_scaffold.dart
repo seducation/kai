@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'nav_rail_sidebar.dart';
-import 'bottom_nav_pane.dart';
-import 'extra_info_pane.dart';
-import 'master_list_pane.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:my_app/provider/queue_provider.dart';
+import 'package:my_app/adaptive_ui/nav_rail_sidebar.dart';
+import 'package:my_app/adaptive_ui/bottom_nav_pane.dart';
+import 'package:my_app/adaptive_ui/extra_info_pane.dart';
+import 'package:my_app/adaptive_ui/master_list_pane.dart';
 
 /// A robust adaptive shell for the application.
 class AdaptiveScaffold extends StatelessWidget {
@@ -63,12 +66,42 @@ class AdaptiveScaffold extends StatelessWidget {
             flex: 3,
             child: Column(
               children: [
-                AppBar(elevation: 0, title: const Text('Activity')),
+                AppBar(
+                  elevation: 0,
+                  title: const Text('Activity'),
+                  actions: [
+                    Consumer<QueueProvider>(
+                      builder: (context, queueProvider, child) {
+                        return IconButton(
+                          icon: const Icon(Icons.clear_all),
+                          onPressed: () => queueProvider.clearQueue(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
                 Expanded(
-                  child: MasterListPane(
-                    items: List.generate(20, (i) => 'Item ${i + 1}'),
-                    selectedId: 0,
-                    onItemSelected: (_) {},
+                  child: Consumer<QueueProvider>(
+                    builder: (context, queueProvider, child) {
+                      if (queueProvider.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (queueProvider.queueItems.isEmpty) {
+                        return const Center(child: Text('Add posts to queue'));
+                      }
+                      return MasterListPane(
+                        items: queueProvider.queueItems
+                            .map((e) => e['label'] ?? '')
+                            .toList(),
+                        selectedId: null,
+                        onItemSelected: (index) {
+                          final postId = queueProvider.queueItems[index]['id'];
+                          if (postId != null) {
+                            context.push('/post/$postId');
+                          }
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
@@ -106,12 +139,42 @@ class AdaptiveScaffold extends StatelessWidget {
             flex: 3,
             child: Column(
               children: [
-                AppBar(elevation: 0, title: const Text('Activity')),
+                AppBar(
+                  elevation: 0,
+                  title: const Text('Activity'),
+                  actions: [
+                    Consumer<QueueProvider>(
+                      builder: (context, queueProvider, child) {
+                        return IconButton(
+                          icon: const Icon(Icons.clear_all),
+                          onPressed: () => queueProvider.clearQueue(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
                 Expanded(
-                  child: MasterListPane(
-                    items: List.generate(20, (i) => 'Item ${i + 1}'),
-                    selectedId: 0,
-                    onItemSelected: (_) {},
+                  child: Consumer<QueueProvider>(
+                    builder: (context, queueProvider, child) {
+                      if (queueProvider.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (queueProvider.queueItems.isEmpty) {
+                        return const Center(child: Text('Add posts to queue'));
+                      }
+                      return MasterListPane(
+                        items: queueProvider.queueItems
+                            .map((e) => e['label'] ?? '')
+                            .toList(),
+                        selectedId: null,
+                        onItemSelected: (index) {
+                          final postId = queueProvider.queueItems[index]['id'];
+                          if (postId != null) {
+                            context.push('/post/$postId');
+                          }
+                        },
+                      );
+                    },
                   ),
                 ),
               ],

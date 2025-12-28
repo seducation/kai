@@ -796,6 +796,73 @@ class AppwriteService {
     }
   }
 
+  Future<Post> getPost(String postId) async {
+    final postRow = await _db.getRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: postsCollection,
+      rowId: postId,
+    );
+    return await _mapRowToPost(postRow);
+  }
+
+  Future<Post> _mapRowToPost(models.Row postRow) async {
+    final profileIdData = postRow.data['profile_id'];
+    String? profileId;
+    if (profileIdData is List) {
+      profileId = profileIdData.isNotEmpty
+          ? profileIdData.first.toString()
+          : null;
+    } else {
+      profileId = profileIdData?.toString();
+    }
+
+    if (profileId == null) {
+      throw Exception('Post ${postRow.$id} has no profile_id');
+    }
+
+    final profile = await getProfile(profileId);
+    final author = Profile.fromRow(profile);
+
+    // Handle file_ids -> mediaUrls conversion if mediaUrls is null/empty
+    List<String> mediaUrls = [];
+    final mediaUrlsData = postRow.data['mediaUrls'];
+    if (mediaUrlsData is List && mediaUrlsData.isNotEmpty) {
+      mediaUrls = List<String>.from(mediaUrlsData.map((e) => e.toString()));
+    } else {
+      final fileIdsData = postRow.data['file_ids'];
+      if (fileIdsData is List) {
+        mediaUrls = fileIdsData
+            .map((id) => getFileViewUrl(id.toString()))
+            .toList();
+      }
+    }
+
+    return Post(
+      id: postRow.$id,
+      author: author,
+      timestamp: postRow.data['timestamp'] != null
+          ? DateTime.parse(postRow.data['timestamp'])
+          : DateTime.now(),
+      contentText: postRow.data['caption'] ?? postRow.data['contentText'] ?? '',
+      stats: PostStats(
+        likes: postRow.data['likes'] ?? 0,
+        comments: postRow.data['comments'] ?? 0,
+        shares: postRow.data['shares'] ?? 0,
+        views: postRow.data['views'] ?? 0,
+      ),
+      mediaUrls: mediaUrls.isNotEmpty ? mediaUrls : null,
+      linkUrl: postRow.data['linkUrl'],
+      linkTitle: postRow.data['linkTitle'],
+      type: PostType.values.firstWhere(
+        (e) => e.toString() == 'PostType.${postRow.data['type']}',
+        orElse: () {
+          if (mediaUrls.isNotEmpty) return PostType.image;
+          return PostType.text;
+        },
+      ),
+    );
+  }
+
   Future<void> deletePost(String postId) async {
     await _db.deleteRow(
       databaseId: Environment.appwriteDatabaseId,
@@ -1125,36 +1192,10 @@ class AppwriteService {
       final posts = <Post>[];
       for (final postRow in postRows) {
         try {
-          final profile = await getProfile(postRow.data['profile_id']);
-          final author = Profile.fromRow(profile);
-
-          final post = Post(
-            id: postRow.$id,
-            author: author,
-            timestamp: postRow.data['timestamp'] != null
-                ? DateTime.parse(postRow.data['timestamp'])
-                : DateTime.now(),
-            contentText: postRow.data['contentText'] ?? '',
-            stats: PostStats(
-              likes: postRow.data['likes'] ?? 0,
-              comments: postRow.data['comments'] ?? 0,
-              shares: postRow.data['shares'] ?? 0,
-              views: postRow.data['views'] ?? 0,
-            ),
-            mediaUrls: postRow.data['mediaUrls'] != null
-                ? List<String>.from(postRow.data['mediaUrls'])
-                : null,
-            linkUrl: postRow.data['linkUrl'],
-            linkTitle: postRow.data['linkTitle'],
-            type: PostType.values.firstWhere(
-              (e) => e.toString() == 'PostType.${postRow.data['type']}',
-              orElse: () => PostType.text,
-            ),
-          );
+          final post = await _mapRowToPost(postRow);
           posts.add(post);
         } catch (e) {
           log('Failed to process post: ${postRow.$id}, error: $e');
-          // If a single post fails, just continue
         }
       }
       return posts;

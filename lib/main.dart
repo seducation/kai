@@ -39,8 +39,11 @@ import 'setting_location_screen.dart';
 import 'setting_privacy_screen.dart';
 import 'setting_safety_screen.dart';
 import 'setting_support_screen.dart';
-import 'about_searches_widgets/about_searches_widget.dart';
-import 'adaptive_ui/adaptive_scaffold.dart';
+import 'package:my_app/about_searches_widgets/about_searches_widget.dart';
+import 'package:my_app/adaptive_ui/adaptive_scaffold.dart';
+import 'package:my_app/provider/queue_provider.dart';
+import 'package:my_app/model/post.dart';
+import 'package:my_app/full_screen_post_detail_page.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -103,6 +106,7 @@ Future<void> main() async {
         Provider.value(value: appwriteService),
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider(create: (_) => ThemeModel()),
+        ChangeNotifierProvider(create: (_) => QueueProvider()),
       ],
       child: MyApp(authService: authService),
     ),
@@ -298,6 +302,40 @@ GoRouter _createRouter(AuthService authService) {
           final extra = state.extra as Map<String, dynamic>?;
           final imagePaths = extra?['images'] as List<String>? ?? [];
           return SentPostScreen(imagePaths: imagePaths);
+        },
+      ),
+      GoRoute(
+        path: '/post/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final appwriteService = context.read<AppwriteService>();
+          final authService = context.read<AuthService>();
+          final profileId = authService.currentUser?.id ?? '';
+
+          return FutureBuilder<Post>(
+            future: appwriteService.getPost(id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return Scaffold(
+                  body: Center(child: Text('Error: ${snapshot.error}')),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Scaffold(
+                  body: Center(child: Text('Post not found')),
+                );
+              }
+              return FullScreenPostDetailPage(
+                post: snapshot.data!,
+                profileId: profileId,
+              );
+            },
+          );
         },
       ),
     ],
