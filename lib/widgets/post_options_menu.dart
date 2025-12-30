@@ -244,7 +244,7 @@ class _ReportPostDialogState extends State<_ReportPostDialog> {
           const Text('Select a reason for reporting this post:'),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            value: _selectedReason,
+            initialValue: _selectedReason,
             items: _reasons.map((reason) {
               return DropdownMenuItem(value: reason, child: Text(reason));
             }).toList(),

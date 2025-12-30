@@ -56,8 +56,9 @@ class _HMVShortsTabscreenState extends State<HMVShortsTabscreen> {
   }
 
   Post? _convertToModelPost(feed_models.FeedItem item) {
-    if (item is! feed_models.PostItem)
+    if (item is! feed_models.PostItem) {
       return null; // Skip non-post items for now in Shorts
+    }
 
     // Infer post type - generally video for this screen, but check extension to be safe
     PostType type = PostType.video;

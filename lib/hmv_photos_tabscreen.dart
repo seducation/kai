@@ -95,8 +95,9 @@ class _HmvPhotosTabscreenState extends State<HmvPhotosTabscreen> {
 
                   // For GridView, we just need the image URL and ID.
                   // We can get this directly from FeedItem if it's a PostItem
-                  if (item is! feed_models.PostItem)
+                  if (item is! feed_models.PostItem) {
                     return const SizedBox.shrink();
+                  }
 
                   if (item.mediaUrls.isEmpty) {
                     return const SizedBox.shrink();
