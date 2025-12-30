@@ -38,6 +38,7 @@ class FeedController extends ChangeNotifier {
   bool get hasMore => _hasMore;
   String? get error => _error;
   String get sessionId => _sessionId;
+  String get userId => _userId; // Added getter for userId
 
   /// Load feed from Cloud Function
   Future<void> loadFeed() async {

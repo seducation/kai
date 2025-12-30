@@ -21,9 +21,10 @@ class OneTimeMessageScreenState extends State<OneTimeMessageScreen> {
       if (mounted) {
         final appwriteService = context.read<AppwriteService>();
         appwriteService.deleteMessage(widget.message.$id);
-        final imageUrl = widget.message.data['message'];
-        final fileId = imageUrl.split('/')[6];
-        appwriteService.deleteFile(fileId);
+        final fileId = widget.message.data['fileId'];
+        if (fileId != null) {
+          appwriteService.deleteFile(fileId);
+        }
         Navigator.of(context).pop();
       }
     });

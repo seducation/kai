@@ -135,29 +135,13 @@ class AppwriteService {
     final ownerId = user.$id;
 
     final fingerprint = HandleSystem.generateFingerprint(handle);
-    final lockId = 'h_$fingerprint';
 
-    // Create the lock document first to ensure uniqueness
-    try {
-      await _db.createRow(
-        databaseId: Environment.appwriteDatabaseId,
-        tableId: profilesCollection,
-        rowId: lockId,
-        data: {'docType': 'handle_lock', 'ownerId': ownerId, 'handle': handle},
-        permissions: [
-          Permission.read(Role.any()),
-          Permission.update(Role.user(ownerId)),
-          Permission.delete(Role.user(ownerId)),
-        ],
+    // Initial check (optional but good for UX)
+    if (!await isHandleAvailable(handle)) {
+      throw AppwriteException(
+        'Handle is already taken or visually similar to an existing one.',
+        409,
       );
-    } catch (e) {
-      if (e is AppwriteException && e.code == 409) {
-        throw AppwriteException(
-          'Handle is already taken or visually similar to an existing one.',
-          409,
-        );
-      }
-      rethrow;
     }
 
     return await _db.createRow(
@@ -165,7 +149,6 @@ class AppwriteService {
       tableId: profilesCollection,
       rowId: ID.unique(),
       data: {
-        'docType': 'profile',
         'ownerId': ownerId,
         'name': name,
         'type': type,
@@ -173,12 +156,11 @@ class AppwriteService {
         'handle': handle,
         'currentHandle': handle,
         'reservedHandles': [handle],
+        'handleFingerprints': [fingerprint],
         'lastHandleChangeAt': DateTime.now().toIso8601String(),
         'location': location,
         'profileImageUrl': profileImageUrl,
         'bannerImageUrl': bannerImageUrl,
-        'followers': [],
-        'savedPosts': [],
       },
       permissions: [
         Permission.read(Role.any()),
@@ -190,21 +172,15 @@ class AppwriteService {
 
   Future<bool> isHandleAvailable(String handle) async {
     final fingerprint = HandleSystem.generateFingerprint(handle);
-    final lockId = 'h_$fingerprint';
 
     try {
-      await _db.getRow(
+      final result = await _db.listRows(
         databaseId: Environment.appwriteDatabaseId,
         tableId: profilesCollection,
-        rowId: lockId,
+        queries: [Query.equal('handleFingerprints', fingerprint)],
       );
-      // If document found, handle is taken
-      return false;
+      return result.total == 0;
     } catch (e) {
-      if (e is AppwriteException && e.code == 404) {
-        // Document not found, handle is available
-        return true;
-      }
       log('Error checking handle availability: $e');
       return false;
     }
@@ -216,7 +192,6 @@ class AppwriteService {
   }) async {
     final profile = await getProfile(profileId);
     final lastChangeAt = profile.data['lastHandleChangeAt'];
-    final ownerId = profile.data['ownerId'];
 
     // Check cooldown (7 days)
     if (!HandleSystem.canChangeHandle(lastChangeAt)) {
@@ -228,40 +203,27 @@ class AppwriteService {
     }
 
     final fingerprint = HandleSystem.generateFingerprint(newHandle);
-    final lockId = 'h_$fingerprint';
 
-    // Try to create the new lock document
-    try {
-      await _db.createRow(
-        databaseId: Environment.appwriteDatabaseId,
-        tableId: profilesCollection,
-        rowId: lockId,
-        data: {
-          'docType': 'handle_lock',
-          'ownerId': ownerId,
-          'handle': newHandle,
-        },
-        permissions: [
-          Permission.read(Role.any()),
-          Permission.update(Role.user(ownerId)),
-          Permission.delete(Role.user(ownerId)),
-        ],
+    // Check availability
+    if (!await isHandleAvailable(newHandle)) {
+      throw AppwriteException(
+        'Handle is already taken or visually similar to an existing one.',
+        409,
       );
-    } catch (e) {
-      if (e is AppwriteException && e.code == 409) {
-        throw AppwriteException(
-          'Handle is already taken or visually similar to an existing one.',
-          409,
-        );
-      }
-      rethrow;
     }
 
     final List<String> reservedHandles = List<String>.from(
       profile.data['reservedHandles'] ?? [],
     );
+    final List<String> handleFingerprints = List<String>.from(
+      profile.data['handleFingerprints'] ?? [],
+    );
+
     if (!reservedHandles.contains(newHandle)) {
       reservedHandles.add(newHandle);
+    }
+    if (!handleFingerprints.contains(fingerprint)) {
+      handleFingerprints.add(fingerprint);
     }
 
     return await updateProfile(
@@ -270,6 +232,7 @@ class AppwriteService {
         'handle': newHandle,
         'currentHandle': newHandle,
         'reservedHandles': reservedHandles,
+        'handleFingerprints': handleFingerprints,
         'lastHandleChangeAt': DateTime.now().toIso8601String(),
       },
     );
@@ -292,12 +255,12 @@ class AppwriteService {
       _db.listRows(
         databaseId: Environment.appwriteDatabaseId,
         tableId: profilesCollection,
-        queries: [Query.search('name', query)],
+        queries: [],
       ),
       _db.listRows(
         databaseId: Environment.appwriteDatabaseId,
         tableId: profilesCollection,
-        queries: [Query.search('bio', query)],
+        queries: [],
       ),
     ]);
 
@@ -334,6 +297,7 @@ class AppwriteService {
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
       tableId: profilesCollection,
+      queries: [],
     );
   }
 
@@ -581,6 +545,42 @@ class AppwriteService {
     }
   }
 
+  Future<models.RowList> getFollowerProfiles({
+    String? userId,
+    String? profileId,
+  }) async {
+    try {
+      String? idToUse = profileId;
+      if (idToUse == null && userId != null) {
+        idToUse = await getMainUserProfileId(userId);
+      }
+
+      if (idToUse == null) return models.RowList(total: 0, rows: []);
+
+      // Query follows where target_id is the current profile
+      final followers = await _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: followsCollection,
+        queries: [Query.equal('target_id', idToUse)],
+      );
+
+      if (followers.total == 0) return models.RowList(total: 0, rows: []);
+
+      final followerIds = followers.rows
+          .map((row) => row.data['follower_id'] as String)
+          .toList();
+
+      return await _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: profilesCollection,
+        queries: [Query.equal('\$id', followerIds)],
+      );
+    } catch (e) {
+      log('Error getting follower profiles: $e');
+      return models.RowList(total: 0, rows: []);
+    }
+  }
+
   String _getChatId(String userId1, String userId2) {
     final ids = [userId1, userId2]..sort();
     return ids.join('_');
@@ -619,36 +619,39 @@ class AppwriteService {
     }
   }
 
-  Future<void> sendOneTimeMessage({
+  Future<void> sendOneTimeMessages({
     required String senderId,
-    required String receiverId,
+    required List<String> receiverIds,
     required String imagePath,
   }) async {
-    final file = await uploadFile(
-      bytes: await File(imagePath).readAsBytes(),
-      filename: imagePath.split('/').last,
-    );
+    final imageBytes = await File(imagePath).readAsBytes();
+    final filename = imagePath.split('/').last;
 
-    final chatId = _getChatId(senderId, receiverId);
+    for (final receiverId in receiverIds) {
+      // Upload file for each recipient to allow independent deletion
+      final file = await uploadFile(bytes: imageBytes, filename: filename);
 
-    await _db.createRow(
-      databaseId: Environment.appwriteDatabaseId,
-      tableId: messagesCollection,
-      rowId: ID.unique(),
-      data: {
-        'chatId': chatId,
-        'senderId': senderId,
-        'message': getFileViewUrl(file.$id),
-        'isOtm': true,
-        'fileId': file.$id,
-      },
-      permissions: [
-        Permission.read(Role.user(senderId)),
-        Permission.update(Role.user(senderId)),
-        Permission.delete(Role.user(senderId)),
-        Permission.read(Role.user(receiverId)),
-      ],
-    );
+      final chatId = _getChatId(senderId, receiverId);
+
+      await _db.createRow(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: messagesCollection,
+        rowId: ID.unique(),
+        data: {
+          'chatId': chatId,
+          'senderId': senderId,
+          'message': getFileViewUrl(file.$id),
+          'isOtm': true,
+          'fileId': file.$id,
+        },
+        permissions: [
+          Permission.read(Role.user(senderId)),
+          Permission.update(Role.user(senderId)),
+          Permission.delete(Role.user(senderId)),
+          Permission.read(Role.user(receiverId)),
+        ],
+      );
+    }
   }
 
   Future<void> deleteMessage(String messageId) async {
@@ -663,6 +666,18 @@ class AppwriteService {
     await _storage.deleteFile(
       bucketId: Environment.appwriteStorageBucketId,
       fileId: fileId,
+    );
+  }
+
+  Future<models.RowList> getMyOneTimeMessages(String currentUserId) async {
+    return _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: messagesCollection,
+      queries: [
+        Query.equal('isOtm', true),
+        // We only want messages sent *to* us, filtering out ones we sent (if any show up due to permissions)
+        Query.notEqual('senderId', currentUserId),
+      ],
     );
   }
 

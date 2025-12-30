@@ -7,10 +7,12 @@ module.exports = {
     // Collection names
     COLLECTIONS: {
         POSTS: 'posts',
-        USERS: 'users',
+        PROFILES: 'profiles',          // Changed: profiles not users (multi-profile system)
         FOLLOWS: 'follows',
+        LIKES: 'likes',                // Added: separate likes collection
+        COMMENTS: 'comments',          // Added: separate comments collection  
         ADS: 'ads',
-        USER_SIGNALS: 'user_signals',
+        OWNER_SIGNALS: 'owner_signals', // Changed: owner_signals not user_signals
         CAROUSEL_MEMORY: 'carousel_memory',
         SEEN_POSTS: 'seen_posts',
     },

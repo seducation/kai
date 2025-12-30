@@ -16,6 +16,13 @@ class CreateRowDialog extends StatefulWidget {
 }
 
 class _CreateRowDialogState extends State<CreateRowDialog> {
+  // ========== ACCOUNT TYPE LIMITS (Easy to modify) ==========
+  static const int maxProfileLimit = 1;
+  static const int maxBusinessLimit = 5;
+  static const int maxThreadLimit = 5;
+  static const int maxChannelLimit = 5;
+  // ===========================================================
+
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
@@ -80,25 +87,74 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
           return;
         }
 
-        if (_selectedType == 'profile') {
-          final existingProfiles = await appwriteService.getUserProfiles(
-            ownerId: user.$id,
-          );
-          if (existingProfiles.rows.any(
-            (row) => row.data['type'] == 'profile',
-          )) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('You can only create one main profile.'),
-              ),
-            );
-            return;
-          }
+        // ========== ACCOUNT TYPE LIMITATION CHECKS ==========
+        final existingProfiles = await appwriteService.getUserProfiles(
+          ownerId: user.$id,
+        );
+
+        // Count existing accounts by type
+        final typeCount = existingProfiles.rows
+            .where((row) => row.data['type'] == _selectedType)
+            .length;
+
+        // Check limits based on selected type
+        int maxLimit;
+        String typeName;
+
+        switch (_selectedType) {
+          case 'profile':
+            maxLimit = maxProfileLimit;
+            typeName = 'Profile';
+            break;
+          case 'business':
+            maxLimit = maxBusinessLimit;
+            typeName = 'Business';
+            break;
+          case 'thread':
+            maxLimit = maxThreadLimit;
+            typeName = 'Thread';
+            break;
+          case 'channel':
+            maxLimit = maxChannelLimit;
+            typeName = 'Channel';
+            break;
+          default:
+            maxLimit = 1;
+            typeName = _selectedType.isEmpty
+                ? 'Account'
+                : '${_selectedType[0].toUpperCase()}${_selectedType.substring(1)}';
         }
+
+        if (typeCount >= maxLimit) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'You have reached the limit for $typeName accounts. '
+                'You have $typeCount/$maxLimit accounts.',
+              ),
+            ),
+          );
+          return;
+        }
+        // ====================================================
 
         // Check handle availability
         final handle = _handleController.text;
+
+        // Validate handle format
+        if (!RegExp(r'^[a-z0-9]+$').hasMatch(handle)) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Handle must only contain lowercase letters and numbers (no spaces or special characters).',
+              ),
+            ),
+          );
+          return;
+        }
+
         if (!await appwriteService.isHandleAvailable(handle)) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(

@@ -20,7 +20,9 @@ async function getInterestBasedPosts(databases, userInterests, limit = POOL_SIZE
             COLLECTIONS.POSTS,
             [
                 Query.equal('tags', userInterests),
-                Query.orderDesc('createdAt'),
+                Query.equal('status', 'active'),
+                Query.equal('isHidden', false),
+                Query.orderDesc('timestamp'),
                 Query.limit(limit)
             ]
         );
@@ -28,7 +30,9 @@ async function getInterestBasedPosts(databases, userInterests, limit = POOL_SIZE
         return posts.documents.map(p => ({
             ...p,
             sourcePool: 'interest',
-            type: 'post'
+            type: 'post',
+            // Calculate engagement score dynamically
+            engagementScore: (p.likes || 0) + (p.comments || 0) + ((p.shares || 0) * 2)
         }));
     } catch (error) {
         console.error('Error fetching interest-based posts:', error.message);

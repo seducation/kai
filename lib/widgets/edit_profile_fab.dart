@@ -472,6 +472,15 @@ class ChannelHeader extends StatelessWidget {
                 label: "Handle",
                 hintText: "Enter your handle",
                 icon: Icons.alternate_email,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a handle';
+                  }
+                  if (!RegExp(r'^[a-z0-9]+$').hasMatch(value)) {
+                    return 'Only lowercase letters and numbers allowed';
+                  }
+                  return null;
+                },
               ),
             ),
           ],
@@ -491,6 +500,7 @@ class CustomTextField extends StatefulWidget {
   final bool isSingleLine;
   final IconData icon;
   final TextEditingController controller;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
@@ -501,6 +511,7 @@ class CustomTextField extends StatefulWidget {
     this.isSingleLine = false,
     required this.icon,
     required this.controller,
+    this.validator,
   });
 
   @override
@@ -556,6 +567,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a value';
+                  }
+                  // Use custom validator if provided
+                  if (widget.validator != null) {
+                    return widget.validator!(value);
                   }
                   return null;
                 },

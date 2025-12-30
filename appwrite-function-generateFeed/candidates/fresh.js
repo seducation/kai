@@ -16,18 +16,22 @@ async function getFreshPosts(databases, limit = POOL_SIZES.FRESH) {
             DATABASE_ID,
             COLLECTIONS.POSTS,
             [
-                Query.greaterThan('createdAt', oneDayAgo),
-                Query.orderDesc('createdAt'),
+                Query.equal('status', 'active'),
+                Query.equal('isHidden', false),
+                Query.greaterThan('timestamp', oneDayAgo),
+                Query.orderDesc('timestamp'),
                 Query.limit(limit * 2) // Over-fetch to filter
             ]
         );
 
-        // Filter for posts from users with low follower count (new creators)
-        // In production, you'd join with users collection, but NoSQL requires separate query
+        // Filter for posts from profiles with low follower count (new creators)
+        // In production, you'd join with profiles collection, but NoSQL requires separate query
         return posts.documents.slice(0, limit).map(p => ({
             ...p,
             sourcePool: 'fresh',
-            type: 'post'
+            type: 'post',
+            // Calculate engagement score dynamically
+            engagementScore: (p.likes || 0) + (p.comments || 0) + ((p.shares || 0) * 2)
         }));
     } catch (error) {
         console.error('Error fetching fresh posts:', error.message);

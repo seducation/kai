@@ -3,13 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:appwrite/appwrite.dart';
 
 import 'features/feed/models/feed_item.dart';
-import 'features/feed/models/post_item.dart';
+import 'features/feed/models/post_item.dart' as feed_models;
 import 'features/feed/models/ad_item.dart';
 import 'features/feed/models/carousel_item.dart';
 import 'features/feed/controllers/feed_controller.dart';
-import 'features/feed/widgets/post_card.dart';
 import 'features/feed/widgets/ad_card.dart';
 import 'features/feed/widgets/carousel_widget.dart';
+
+import 'package:my_app/widgets/post_item.dart' as widgets;
+import 'package:my_app/model/post.dart' as model;
+import 'package:my_app/model/profile.dart' as profile_model;
 
 /// Main feed screen (HMV Feature Tab)
 /// This is the primary social media feed using the advanced ranking algorithm
@@ -162,17 +165,49 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
     );
   }
 
+  model.Post _convertToModelPost(feed_models.PostItem item) {
+    // Infer post type from media
+    model.PostType type = model.PostType.text;
+    if (item.mediaUrls.isNotEmpty) {
+      final firstUrl = item.mediaUrls.first.toLowerCase();
+      if (firstUrl.endsWith('.mp4') ||
+          firstUrl.endsWith('.mov') ||
+          firstUrl.endsWith('.avi')) {
+        type = model.PostType.video;
+      } else {
+        type = model.PostType.image;
+      }
+    }
+
+    return model.Post(
+      id: item.postId,
+      author: profile_model.Profile(
+        id: item.userId,
+        name: item.username,
+        type: 'profile', // Default
+        profileImageUrl: item.profileImage,
+        ownerId: '', // Unknown from feed item
+        createdAt: DateTime.now(), // Unknown from feed item
+      ),
+      timestamp: item.createdAt,
+      contentText: item.content,
+      type: type,
+      mediaUrls: item.mediaUrls,
+      stats: model.PostStats(
+        likes: item.engagementScore, // Approximate
+        views: item.viewCount,
+      ),
+    );
+  }
+
   /// Build appropriate widget for each feed item type
   Widget _buildFeedItem(FeedItem item, FeedController controller) {
     switch (item.type) {
       case 'post':
-        return PostCard(
-          post: item as PostItem,
-          controller: controller,
-          onTap: () {
-            // Navigate to post detail
-            // Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailScreen(post: item)));
-          },
+        if (item is! feed_models.PostItem) return const SizedBox.shrink();
+        return widgets.PostItem(
+          post: _convertToModelPost(item),
+          profileId: controller.userId,
         );
 
       case 'ad':

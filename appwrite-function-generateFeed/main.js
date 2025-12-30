@@ -40,46 +40,59 @@ module.exports = async ({ req, res, log, error }) => {
 
         const databases = new Databases(client);
 
-        // Get user ID from authorization header
-        const userId = req.headers['x-appwrite-user-id'];
-        if (!userId) {
+        // Get user ID (ownerId) from authorization header
+        const ownerId = req.headers['x-appwrite-user-id'];
+        if (!ownerId) {
             return res.json({ error: 'Unauthorized' }, 401);
         }
 
-        log(`Generating feed for user: ${userId}, session: ${sessionId}, postType: ${postType}`);
+        log(`Generating feed for owner: ${ownerId}, session: ${sessionId}, postType: ${postType}`);
 
         // Validate pagination parameters
         const safeOffset = Math.max(0, parseInt(offset) || 0);
         const safeLimit = Math.min(FEED.MAX_LIMIT, Math.max(1, parseInt(limit) || FEED.DEFAULT_LIMIT));
 
-        // Step 1: Get user profile and recent signals
-        const [user, recentSignals] = await Promise.all([
-            databases.getDocument(DATABASE_ID, COLLECTIONS.USERS, userId),
-            databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SIGNALS, [
-                Query.equal('userId', userId),
-                Query.orderDesc('createdAt'),
+        // Step 1: Get owner's profiles and recent signals
+        const [userProfiles, recentSignals] = await Promise.all([
+            databases.listDocuments(DATABASE_ID, COLLECTIONS.PROFILES, [
+                Query.equal('ownerId', ownerId),
+                Query.limit(100)
+            ]),
+            databases.listDocuments(DATABASE_ID, COLLECTIONS.OWNER_SIGNALS, [
+                Query.equal('ownerId', ownerId),
+                Query.orderDesc('timestamp'),
                 Query.limit(20)
             ])
         ]);
 
-        log(`User interests: ${user.interests?.join(', ')}`);
+        // Extract interests from first profile (or aggregate across all profiles)
+        const userInterests = userProfiles.documents.length > 0
+            ? (userProfiles.documents[0].interests || [])
+            : [];
+
+        log(`User interests: ${userInterests.join(', ')}`);
 
         // Step 2: Build session context (patience, engagement state)
         let sessionContext = await buildSessionContext(
             databases,
-            userId,
+            ownerId,
             recentSignals.documents,
-            user
+            { interests: userInterests }
         );
 
         log(`Session state: ${sessionContext.state}, Ad aggression: ${sessionContext.adAggression}`);
 
         // Step 3: Check ad fatigue
-        const adFatigued = await checkAdFatigue(databases, userId, sessionId);
+        const adFatigued = await checkAdFatigue(databases, ownerId, sessionId);
         sessionContext.adFatigue = adFatigued;
 
-        // Step 4: Determine if cold start (new user)
-        const isColdStart = user.followingCount < 5;
+        // Step 4: Determine if cold start (no follows)
+        const profileIds = userProfiles.documents.map(p => p.$id);
+        const followsResult = await databases.listDocuments(DATABASE_ID, COLLECTIONS.FOLLOWS, [
+            Query.equal('follower_id', profileIds),
+            Query.limit(1)
+        ]);
+        const isColdStart = followsResult.total < 5;
 
         // Create a base query for postType if it's not 'all'
         const postTypeQueries = [];
@@ -90,18 +103,18 @@ module.exports = async ({ req, res, log, error }) => {
         // Step 5: Generate candidates from multiple pools (in parallel)
         log('Fetching candidates from multiple pools...');
 
-        const [ 
-            followedPosts, 
-            interestPosts, 
-            trendingPosts, 
-            freshPosts, 
-            viralPosts, 
-            explorationPosts 
+        const [
+            followedPosts,
+            interestPosts,
+            trendingPosts,
+            freshPosts,
+            viralPosts,
+            explorationPosts
         ] = await Promise.all([
-            isColdStart ? Promise.resolve([]) : getFollowedPosts(databases, userId, POOL_SIZES.FOLLOWED, ...postTypeQueries),
+            isColdStart ? Promise.resolve([]) : getFollowedPosts(databases, ownerId, POOL_SIZES.FOLLOWED, ...postTypeQueries),
             getInterestBasedPosts(
                 databases,
-                user.interests || [],
+                userInterests,
                 isColdStart ? COLD_START_POOL_SIZES.INTEREST : POOL_SIZES.INTEREST,
                 ...postTypeQueries
             ),
@@ -136,18 +149,18 @@ module.exports = async ({ req, res, log, error }) => {
 
         // Step 6: Rank posts using multi-signal algorithm
         log('Ranking posts...');
-        const rankedPosts = await rankPosts(allCandidates, databases, userId, sessionContext);
+        const rankedPosts = await rankPosts(allCandidates, databases, ownerId, sessionContext);
 
         // Step 7: Run ad auction
         let ads = [];
         if (!sessionContext.adFatigue && sessionContext.adAggression !== 'none') {
             log('Running ad auction...');
-            ads = await runAdAuction(databases, user.interests || [], 5);
+            ads = await runAdAuction(databases, userInterests, 5);
             log(`Selected ${ads.length} ads`);
         }
 
         // Step 8: Get seen posts for deduplication
-        const seenPostIds = await getSeenPostIds(databases, userId, sessionId);
+        const seenPostIds = await getSeenPostIds(databases, ownerId, sessionId);
         log(`User has seen ${seenPostIds.size} posts recently`);
 
         // Step 9: Mix feed (organic + ads + carousels)
@@ -156,7 +169,7 @@ module.exports = async ({ req, res, log, error }) => {
             rankedPosts,
             ads,
             databases,
-            userId,
+            ownerId,
             sessionContext,
             seenPostIds
         );
@@ -165,7 +178,7 @@ module.exports = async ({ req, res, log, error }) => {
         const paginatedFeed = paginateFeed(mixedFeed, safeOffset, safeLimit);
 
         // Step 11: Record shown posts
-        await recordSeenPosts(databases, userId, sessionId, paginatedFeed.items);
+        await recordSeenPosts(databases, ownerId, sessionId, paginatedFeed.items);
 
         log(`Feed generated: ${paginatedFeed.items.length} items (${paginatedFeed.hasMore ? 'more available' : 'end reached'})`);
 

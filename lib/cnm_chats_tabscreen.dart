@@ -1,7 +1,9 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/chat_messaging_screen.dart';
+import 'package:my_app/environment.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/one_time_message_screen.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +20,7 @@ class CNMChatsTabscreen extends StatefulWidget {
 class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
   late AppwriteService appwrite;
   List<ChatModel> _chatItems = [];
+  List<ChatModel> _statusItems = [];
   bool _isLoading = true;
 
   @override
@@ -25,6 +28,67 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
     super.initState();
     appwrite = Provider.of<AppwriteService>(context, listen: false);
     _getConversations();
+    _getStatuses();
+  }
+
+  Future<void> _getStatuses() async {
+    try {
+      final user = await appwrite.getUser();
+      if (user == null) return;
+
+      final otmMessages = await appwrite.getMyOneTimeMessages(user.$id);
+      if (otmMessages.total == 0) {
+        if (mounted) setState(() => _statusItems = []);
+        return;
+      }
+
+      // Group by sender
+      final otmsBySender = <String, List<models.Row>>{};
+      for (final msg in otmMessages.rows) {
+        final senderId = msg.data['senderId'] as String;
+        otmsBySender.putIfAbsent(senderId, () => []).add(msg);
+      }
+
+      final senderIds = otmsBySender.keys.toList();
+      final db = TablesDB(appwrite.client);
+      final senderProfiles = await db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: AppwriteService.profilesCollection,
+        queries: [
+          Query.equal('ownerId', senderIds),
+          Query.equal('type', 'profile'),
+        ],
+      );
+
+      final newStatusItems = <ChatModel>[];
+      for (final profile in senderProfiles.rows) {
+        final ownerId = profile.data['ownerId'] as String;
+        final msgs = otmsBySender[ownerId];
+        if (msgs == null || msgs.isEmpty) continue;
+
+        newStatusItems.add(
+          ChatModel(
+            userId:
+                ownerId, // Using ownerId as userId for consistency with chat
+            name: profile.data['name'] as String,
+            message: 'Received OTM',
+            time: msgs.last.$createdAt,
+            imgPath: profile.data['profileImageUrl'] as String,
+            hasStory: true,
+            messageCount: msgs.length,
+            isOnline: false,
+          ),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _statusItems = newStatusItems;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting statuses: $e');
+    }
   }
 
   Future<void> _getConversations() async {
@@ -127,22 +191,27 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
   }
 
   void _viewStory(int index) async {
-    final chat = _chatItems[index];
+    final chat = _statusItems[index];
     if (chat.hasStory) {
       final user = await appwrite.getUser();
       if (user == null) return;
-      final messages = await appwrite.getMessages(
-        userId1: user.$id,
-        userId2: chat.userId,
-      );
-      final otmMessages = messages.rows.where((m) => m.data['isOtm'] == true);
 
-      if (otmMessages.isEmpty) {
-        _getConversations();
+      // We can use the already fetched OTMs or fetch again. Fetching ensures we get the latest state.
+      final messages = await appwrite.getMyOneTimeMessages(user.$id);
+
+      final senderOtms = messages.rows
+          .where((m) => m.data['senderId'] == chat.userId)
+          .toList();
+
+      if (senderOtms.isEmpty) {
+        _getStatuses(); // Refresh if empty
         return;
       }
 
-      final otmMessage = otmMessages.first;
+      // Sort by creation time to show oldest first or newest? Usually oldest first (FIFO)
+      senderOtms.sort((a, b) => a.$createdAt.compareTo(b.$createdAt));
+
+      final otmMessage = senderOtms.first;
 
       if (!mounted) return;
 
@@ -151,7 +220,7 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
         MaterialPageRoute(
           builder: (context) => OneTimeMessageScreen(message: otmMessage),
         ),
-      ).then((_) => _getConversations());
+      ).then((_) => _getStatuses()); // Refresh statuses after returning
     }
   }
 
@@ -205,63 +274,95 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
 }
 
 class StatusBar extends StatelessWidget {
-  final List<ChatModel> chatItems;
   final Function(int) onViewStory;
 
   const StatusBar({
     super.key,
-    required this.chatItems,
+    required List<ChatModel> chatItems,
     required this.onViewStory,
-  });
+  }) : _statusItems = chatItems;
+
+  final List<ChatModel> _statusItems;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        itemCount: chatItems.length,
-        itemBuilder: (context, index) {
-          final chat = chatItems[index];
-          return GestureDetector(
-            onTap: () => onViewStory(index),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: chat.hasStory
-                            ? Colors.pinkAccent
-                            : Colors.transparent,
-                        width: 3,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 34,
-                      backgroundImage: chat.imgPath.startsWith('http')
-                          ? CachedNetworkImageProvider(chat.imgPath)
-                          : null,
-                      child: !chat.imgPath.startsWith('http')
-                          ? const Icon(Icons.person)
-                          : null,
+    return _statusItems.isEmpty
+        ? const SizedBox.shrink()
+        : SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              itemCount: _statusItems.length,
+              itemBuilder: (context, index) {
+                final chat = _statusItems[index];
+                return GestureDetector(
+                  onTap: () => onViewStory(index),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Column(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: chat.hasStory
+                                  ? Colors.pinkAccent
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 34,
+                            backgroundImage: chat.imgPath.startsWith('http')
+                                ? CachedNetworkImageProvider(chat.imgPath)
+                                : null,
+                            child: !chat.imgPath.startsWith('http')
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              chat.name,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (chat.hasStory &&
+                                chat.messageCount != null &&
+                                chat.messageCount! > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.blueAccent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '${chat.messageCount}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    chat.name,
-                    style: const TextStyle(color: Colors.black, fontSize: 12),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           );
-        },
-      ),
-    );
   }
 }
 

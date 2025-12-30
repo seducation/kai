@@ -9,14 +9,16 @@ const { Query } = require('node-appwrite');
  */
 async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING) {
     try {
-        // Get posts with high engagement score
+        // Get posts with high engagement (using likes as proxy)
         const posts = await databases.listDocuments(
             DATABASE_ID,
             COLLECTIONS.POSTS,
             [
-                Query.greaterThan('engagementScore', ENGAGEMENT.HIGH_ENGAGEMENT),
-                Query.orderDesc('engagementScore'),
-                Query.orderDesc('createdAt'),
+                Query.equal('status', 'active'),
+                Query.equal('isHidden', false),
+                Query.greaterThan('likes', ENGAGEMENT.HIGH_ENGAGEMENT),
+                Query.orderDesc('likes'),
+                Query.orderDesc('timestamp'),
                 Query.limit(limit)
             ]
         );
@@ -24,7 +26,9 @@ async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING) {
         return posts.documents.map(p => ({
             ...p,
             sourcePool: 'trending',
-            type: 'post'
+            type: 'post',
+            // Calculate engagement score dynamically
+            engagementScore: (p.likes || 0) + (p.comments || 0) + ((p.shares || 0) * 2)
         }));
     } catch (error) {
         console.error('Error fetching trending posts:', error.message);
