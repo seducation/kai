@@ -1,4 +1,4 @@
-const { Client, Databases, Query, ID } = require('node-appwrite');
+const { Client, Databases, Storage, Query, ID } = require('node-appwrite');
 const { DATABASE_ID: DEFAULT_DATABASE_ID, COLLECTIONS, POOL_SIZES, COLD_START_POOL_SIZES, FEED } = require('./config/constants');
 const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || DEFAULT_DATABASE_ID;
 
@@ -253,7 +253,9 @@ module.exports = async ({ req, res, log, error }) => {
             });
         }
 
-        const hydratedItems = paginatedFeed.items.map(item => {
+        const storage = new Storage(client);
+
+        const hydratedItems = await Promise.all(paginatedFeed.items.map(async (item) => {
             if (item.type !== 'post') return item;
 
             // Normalize profile_id
@@ -267,9 +269,24 @@ module.exports = async ({ req, res, log, error }) => {
             const profile = (profileId && profilesMap[profileId]) ? profilesMap[profileId] : {};
             const bucketId = 'gvone'; // Hardcoded as per environment
 
-            // Construct media URLs
+            // Detect media type
+            let urlSuffix = '&t=.img'; // default
+            if (item.file_ids && item.file_ids.length > 0) {
+                try {
+                    // Fetch metadata of the first file to determine type
+                    // We only check the first file for efficiency
+                    const file = await storage.getFile(bucketId, item.file_ids[0]);
+                    if (file.mimeType && file.mimeType.startsWith('video/')) {
+                        urlSuffix = '&t=.mp4';
+                    }
+                } catch (e) {
+                    log(`Warning: Failed to fetch file metadata for ${item.file_ids[0]}: ${e.message}`);
+                }
+            }
+
+            // Construct media URLs with type hint suffix
             const mediaUrls = (item.file_ids || []).map(fileId =>
-                `${client.config.endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}&mode=admin`
+                `${client.config.endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}&mode=admin${urlSuffix}`
             );
 
             // Construct profile image URL
@@ -287,7 +304,8 @@ module.exports = async ({ req, res, log, error }) => {
                 content: item.caption || '',
                 postId: item.$id
             };
-        });
+        }));
+
 
         log(`Feed generated: ${hydratedItems.length} items (${paginatedFeed.hasMore ? 'more available' : 'end reached'})`);
 
