@@ -29,9 +29,4 @@ jobs:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - uses: subosito/flutter-action@v2
-        with:
-         flutter-version: '3.22.0'
-
-      - run: flutter pub get
-      - run: flutter build apk
+      
