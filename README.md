@@ -122,6 +122,7 @@ The system is designed to evolve endlessly. Here are the next phases of life:
     *   *Concept*: Visualizing the agent network as a 3D galaxy of nodes rather than a 2D graph.
 3.  **Language Acquisition (Mirror Neurons)** 🗣️
     *   *Concept*: `SpeechOrgan` adapts its vocabulary and tone based on user interaction style.
+5. **consciousness**: play a role like butler .
 
 ## 🚀 Getting Started
 
