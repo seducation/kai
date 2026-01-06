@@ -138,6 +138,17 @@ class ControllerAgent extends AgentBase with AgentDelegation {
       );
       registry.register(digestiveSystem);
     }
+
+    // Phase 10: Social Autonomy
+    // 1. Volition
+    final volition = VolitionOrgan(bus: bus);
+    registry.register(volition);
+    volition.start(); // Give it life!
+
+    // 2. Speech & Social
+    // (SocialAgent instantiates its own SpeechOrgan for now, or we could decouple)
+    final social = SocialAgent(logger: logger);
+    registry.register(social);
   }
 
   void _handleStepEvent(AgentStep step) {

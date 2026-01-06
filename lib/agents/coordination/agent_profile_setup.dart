@@ -192,6 +192,40 @@ class AgentProfileSetup {
         maxConcurrentTasks: 5, // High availability for safety
       ));
     }
+
+    // Social Agent
+    if (registry.getAgent('SocialAgent') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'SocialAgent',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_social_interaction',
+            name: 'Social Interaction',
+            category: CapabilityCategory.custom,
+            proficiency: 0.95,
+            keywords: ['social', 'chat', 'communicate', 'talk', 'notify'],
+          ),
+        ],
+        maxConcurrentTasks: 2,
+      ));
+    }
+
+    // Volition Organ (Free Will)
+    if (registry.getAgent('VolitionOrgan') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'VolitionOrgan',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_autonomous_drive',
+            name: 'Autonomous Drive',
+            category: CapabilityCategory.custom,
+            proficiency: 1.0,
+            keywords: ['volition', 'drive', 'will', 'autonomous'],
+          ),
+        ],
+        maxConcurrentTasks: 1,
+      ));
+    }
   }
 
   /// Create a custom agent profile
