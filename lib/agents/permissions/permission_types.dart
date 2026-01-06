@@ -1,5 +1,6 @@
 /// Permission types for the storage access control system.
-///
+library;
+
 /// These define what actions can be performed on a resource.
 
 /// Types of permissions that can be granted.

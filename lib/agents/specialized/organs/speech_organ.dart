@@ -1,7 +1,5 @@
 import '../../core/step_types.dart';
 import '../../coordination/organ_base.dart';
-import '../../core/step_types.dart';
-import '../../coordination/organ_base.dart';
 import '../systems/limbic_system.dart';
 
 /// The Speech Organ (Broca's Area) 🗣️

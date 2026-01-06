@@ -1,5 +1,6 @@
 /// Barrel export for the permissions module.
-///
+library;
+
 /// This module provides:
 /// - Permission types and models
 /// - Central permission registry

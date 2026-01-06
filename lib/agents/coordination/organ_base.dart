@@ -14,11 +14,11 @@ abstract class Organ extends AgentBase {
   final int tokenLimit;
 
   Organ({
-    required String name,
+    required super.name,
     required this.tissues,
     this.tokenLimit = 10000,
     super.logger,
-  }) : super(name: name);
+  });
 
   /// Current metabolic health (0.0 to 1.0)
   double get health => _metabolism;

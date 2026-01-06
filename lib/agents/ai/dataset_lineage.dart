@@ -174,8 +174,12 @@ class DatasetLineageTracker {
     final oldDatasets = <String>{};
     final newDatasets = <String>{};
 
-    for (final r in oldRecords) oldDatasets.addAll(r.datasetIds);
-    for (final r in newRecords) newDatasets.addAll(r.datasetIds);
+    for (final r in oldRecords) {
+      oldDatasets.addAll(r.datasetIds);
+    }
+    for (final r in newRecords) {
+      newDatasets.addAll(r.datasetIds);
+    }
 
     return ModelComparison(
       modelId: modelId,

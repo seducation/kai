@@ -7,19 +7,10 @@ import '../core/step_logger.dart';
 import '../orchestration/graph_model.dart';
 import '../specialized/specialized.dart';
 import 'coordination.dart';
-import 'message_bus.dart';
-import 'task_queue.dart';
-import 'planner_agent.dart';
-import 'reliability_tracker.dart';
-import 'execution_manager.dart';
-import 'agent_capability.dart' show RoutableTask;
 import 'autonomic_system.dart';
 import 'sleep_manager.dart';
 import 'immune_system.dart';
 import 'reflex_system.dart';
-import 'motor_system.dart';
-import 'agent_profile_setup.dart';
-import '../specialized/reflex_audit_agent.dart';
 import '../specialized/systems/limbic_system.dart';
 
 /// Function type for AI planning
@@ -475,7 +466,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     );
   }
 
-  // TODO: Add proper mapping enum
+  // Mapping of modes to specialized agents
   StepType _mapCategoryToAction(dynamic category) {
     // Simple mapping for now
     return StepType.analyze;

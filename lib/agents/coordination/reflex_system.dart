@@ -81,7 +81,7 @@ class ReflexSystem {
   }
 
   void _triggerQuarantine(String agentName) {
-    print('⚡ STARTLE REFLEX: Quarantining agent "$agentName"');
+    // print('⚡ STARTLE REFLEX: Quarantining agent "$agentName"');
     _bus.broadcast(AgentMessage(
       id: 'reflex_q_${DateTime.now().millisecondsSinceEpoch}',
       from: 'ReflexSystem',
@@ -107,7 +107,7 @@ class ReflexSystem {
   }
 
   void _triggerPainWithdrawal(String stimulus) {
-    print('⚡ REFLEX ACTIVATED: Withdrawal from dangerous stimulus "$stimulus"');
+    // print('⚡ REFLEX ACTIVATED: Withdrawal from dangerous stimulus "$stimulus"');
     _bus.broadcast(AgentMessage(
       id: 'reflex_${DateTime.now().millisecondsSinceEpoch}',
       from: 'ReflexSystem',

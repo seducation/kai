@@ -90,7 +90,7 @@ class AutonomicSystem {
       _healthStream.add(newHealth);
 
       if (issues.isNotEmpty) {
-        print('[AutonomicSystem] Health: ${newHealth.name}, Issues: $issues');
+        // print('[AutonomicSystem] Health: ${newHealth.name}, Issues: $issues');
         // In future: emit to event bus
       }
     }

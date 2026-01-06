@@ -23,7 +23,7 @@ class MotorSystem {
           success: false, error: 'Actuator "$actuatorKey" not found');
     }
 
-    print('🧠 MotorSystem: Coordinating ${actuator.name} contraction...');
+    // print('🧠 MotorSystem: Coordinating ${actuator.name} contraction...');
 
     try {
       return await actuator.act(input);

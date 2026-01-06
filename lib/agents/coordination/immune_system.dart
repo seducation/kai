@@ -54,7 +54,7 @@ class ImmuneSystem {
     // 1. Check for "Dead" Agents (High failure rate)
     final deadAgents = _reliability.getFailingAgents(threshold: 0.8);
     if (deadAgents.isNotEmpty) {
-      print('🦠 Pathogens detected (Failing Agents): $deadAgents');
+      // print('🦠 Pathogens detected (Failing Agents): $deadAgents');
       _spikeInflammation(0.2 * deadAgents.length);
       // In future: Quarantine them
     }
@@ -82,14 +82,14 @@ class ImmuneSystem {
 
   void _triggerFever() {
     _isFeverMode = true;
-    print('🔥 FEVER RESPONSE ACTIVATED: System Entering Safe Mode');
+    // print('🔥 FEVER RESPONSE ACTIVATED: System Entering Safe Mode');
     // Lock down non-essential systems (simulated)
     // _bus.publish(Message(type: MessageType.systemLockdown));
   }
 
   void _breakFever() {
     _isFeverMode = false;
-    print('💧 Fever Broken: System Returning to Homeostasis');
+    // print('💧 Fever Broken: System Returning to Homeostasis');
   }
 
   bool get isCompromised => _isFeverMode;

@@ -11,10 +11,10 @@ abstract class OrganSystem extends AgentBase {
   final List<Organ> organs;
 
   OrganSystem({
-    required String name,
+    required super.name,
     required this.organs,
     super.logger,
-  }) : super(name: name);
+  });
 
   /// Overall system health based on organ metabolic states
   double get systemicHomeostasis {

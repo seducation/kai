@@ -1,15 +1,13 @@
 import '../core/agent_base.dart';
 import '../core/step_types.dart';
 import '../core/step_schema.dart';
-import '../core/step_logger.dart';
 
 /// Reflex Audit Agent 🛡️🤖
 ///
 /// A light-weight agent that acts as a "Safety Jury".
 /// It decides if an agent should be quarantined based on failure context.
 class ReflexAuditAgent extends AgentBase {
-  ReflexAuditAgent({StepLogger? logger})
-      : super(name: 'ReflexAudit', logger: logger);
+  ReflexAuditAgent({super.logger}) : super(name: 'ReflexAudit');
 
   @override
   Future<R> onRun<R>(dynamic input) async {

@@ -49,10 +49,10 @@ class WebhookInterface extends ExternalInterface {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         // Success
       } else {
-        print('[WebhookInterface] Failed to send: ${response.statusCode}');
+        // print('[WebhookInterface] Failed to send: ${response.statusCode}');
       }
     } catch (e) {
-      print('[WebhookInterface] Connection error: $e');
+      // print('[WebhookInterface] Connection error: $e');
     } finally {
       client.close();
     }

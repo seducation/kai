@@ -83,8 +83,8 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
   - **Immune System**: `ImmuneSystem` (Active defense & Safe mode).
   - **Spinal Cord (Reflexes)**: `ReflexSystem` (Instant safety).
   - **Muscles (Motor System)**: `MotorSystem` & `EffectorAgent` (External action).
-  - **Social Autonomy & Omni-Interfaces**: `VolitionOrgan` (Free Will), `SpeechOrgan` (Broca's), & `ExternalInterface`.
-  - **Limbic System (Emotions)**: `LimbicSystem` (PAD Model - Pleasure, Arousal, Dominance).
+  - **Social Integration**: `SocialAgent`, `SpeechOrgan` (Broca's/Wernicke's), & `ExternalInterfaces` (Webhooks, Appwrite).
+  - **Limbic System (Emotions)**: `LimbicSystem` (PAD Model - Pleasure, Arousal, Dominance) for emotional context regulating agent responses.
 
 ## 🔮 Future Roadmap (Evolutionary Path)
 

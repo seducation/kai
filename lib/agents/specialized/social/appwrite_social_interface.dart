@@ -53,9 +53,9 @@ class AppwriteSocialInterface extends ExternalInterface {
 
       // For this implementation, let's just log that we would write it.
       // To make it real, we'd need to ensure AppwriteAgent exposes the Databases service.
-      print('[AppwriteSocial] Writing to DB: $message');
+      // print('[AppwriteSocial] Writing to DB: $message');
     } catch (e) {
-      print('[AppwriteSocial] Error: $e');
+      // print('[AppwriteSocial] Error: $e');
     }
   }
 

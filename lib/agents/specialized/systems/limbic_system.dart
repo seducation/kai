@@ -1,6 +1,5 @@
 import 'dart:async';
 import '../../coordination/organ_system.dart';
-import '../../coordination/organ_base.dart';
 
 /// The Emotional State using the PAD Model (Pleasure, Arousal, Dominance)
 /// Values range from -1.0 to 1.0

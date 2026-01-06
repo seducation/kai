@@ -21,7 +21,7 @@ class AppwriteActuator implements Actuator {
 
   @override
   Future<ActuatorResult> act(dynamic input) async {
-    print('🦾 AppwriteActuator: Deploying/Executing Cloud Function for $input');
+    // print('🦾 AppwriteActuator: Deploying/Executing Cloud Function for $input');
 
     // Simulation of Appwrite Function execution
     await Future.delayed(const Duration(seconds: 2));
@@ -48,7 +48,7 @@ class ShellActuator implements Actuator {
           success: false, error: 'Shell input must be a String command');
     }
 
-    print('🦾 ShellActuator: Executing command "$input"');
+    // print('🦾 ShellActuator: Executing command "$input"');
 
     try {
       // In a real environment, this would be highly restricted/sandboxed

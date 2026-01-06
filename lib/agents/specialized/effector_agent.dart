@@ -1,7 +1,7 @@
 import '../core/agent_base.dart';
 import '../core/step_types.dart';
 import '../core/step_schema.dart';
-import '../core/step_logger.dart';
+
 import '../coordination/motor_system.dart';
 import '../coordination/agent_capability.dart';
 
@@ -12,7 +12,7 @@ import '../coordination/agent_capability.dart';
 class EffectorAgent extends AgentBase {
   final MotorSystem motor = MotorSystem();
 
-  EffectorAgent({StepLogger? logger}) : super(name: 'Effector', logger: logger);
+  EffectorAgent({super.logger}) : super(name: 'Effector');
 
   @override
   Future<R> onRun<R>(dynamic input) async {

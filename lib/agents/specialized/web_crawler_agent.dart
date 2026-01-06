@@ -170,7 +170,8 @@ class WebCrawlerAgent extends AgentBase {
 
   /// Cache content (placeholder)
   Future<void> _cache(String url, WebContent content) async {
-    // TODO: Implement actual caching
+    // Placeholder for caching implementation
+    // _cacheStorage[url] = content;
   }
 
   /// Close the client

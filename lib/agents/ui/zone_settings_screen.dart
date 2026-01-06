@@ -149,7 +149,8 @@ class _ZoneSettingsScreenState extends State<ZoneSettingsScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<StorageZoneType>(
-                  value: selectedType,
+                  // initialValue sets the initial state, value is deprecated for FormField
+                  initialValue: selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Zone Type',
                     border: OutlineInputBorder(),
@@ -189,6 +190,7 @@ class _ZoneSettingsScreenState extends State<ZoneSettingsScreen> {
                             ? null
                             : descController.text,
                       );
+                      if (!context.mounted) return;
                       Navigator.pop(context, true);
                     },
               child: const Text('Create'),

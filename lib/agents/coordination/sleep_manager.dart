@@ -51,7 +51,7 @@ class SleepManager {
   }
 
   void _wakeUp() {
-    print('[SleepManager] Waking up!');
+    // print('[SleepManager] Waking up!');
     _currentState = SleepState.awake;
     _stateStream.add(_currentState);
     _resetTimer();
@@ -60,7 +60,7 @@ class SleepManager {
   Future<void> _enterSleep() async {
     if (!_isActive) return;
 
-    print('[SleepManager] Entering Sleep Mode...');
+    // print('[SleepManager] Entering Sleep Mode...');
 
     // Stage 1: Light Sleep (Cleanup)
     _currentState = SleepState.lightSleep;
@@ -86,7 +86,7 @@ class SleepManager {
       ExecutionManager();
       // Compact runtime memory if needed
     } catch (e) {
-      print('[SleepManager] Cleanup failed: $e');
+      // print('[SleepManager] Cleanup failed: $e');
     }
   }
 
@@ -95,7 +95,7 @@ class SleepManager {
       // 1. Compact logs (future)
       // 2. Archive old execution history
     } catch (e) {
-      print('[SleepManager] Compaction failed: $e');
+      // print('[SleepManager] Compaction failed: $e');
     }
   }
 }

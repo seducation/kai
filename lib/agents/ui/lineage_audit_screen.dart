@@ -366,10 +366,12 @@ class _LineageAuditScreenState extends State<LineageAuditScreen>
   }
 
   String _formatDuration(Duration duration) {
-    if (duration.inHours > 0)
+    if (duration.inHours > 0) {
       return '${duration.inHours}h ${duration.inMinutes % 60}m';
-    if (duration.inMinutes > 0)
+    }
+    if (duration.inMinutes > 0) {
       return '${duration.inMinutes}m ${duration.inSeconds % 60}s';
+    }
     return '${duration.inSeconds}s';
   }
 

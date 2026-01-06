@@ -1,5 +1,6 @@
 /// Barrel export for the storage module.
-///
+library;
+
 /// Provides:
 /// - Storage taxonomy (zones/vaults) model
 /// - Taxonomy registry for managing zones

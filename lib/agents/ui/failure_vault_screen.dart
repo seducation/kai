@@ -170,6 +170,7 @@ class _FailureVaultScreenState extends State<FailureVaultScreen>
 
   Future<void> _replayTask(ExecutionRecord record) async {
     await _controlAgent.replay(record.taskName);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Replaying "${record.taskName}"...')),
     );
@@ -177,11 +178,13 @@ class _FailureVaultScreenState extends State<FailureVaultScreen>
 
   Future<void> _dismissFailure(ExecutionRecord failure) async {
     await _manager.resolveFailure(failure.id);
+    if (!mounted) return;
     setState(() {});
   }
 
   Future<void> _cleanup() async {
     await _controlAgent.cleanup();
+    if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Cleanup complete')),
