@@ -19,6 +19,7 @@ import 'immune_system.dart';
 import 'reflex_system.dart';
 import 'motor_system.dart';
 import 'agent_profile_setup.dart';
+import '../specialized/reflex_audit_agent.dart';
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -88,6 +89,11 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     // Start active defense
     immuneSystem.start();
     reflexSystem.start();
+
+    final auditAgent = registry.getAgentOfType<ReflexAuditAgent>();
+    if (auditAgent != null) {
+      reflexSystem.setAuditAgent(auditAgent);
+    }
 
     // Instantiate Organs (using other agents as tissues)
     _initializeOrgans();

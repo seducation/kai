@@ -175,6 +175,23 @@ class AgentProfileSetup {
         maxConcurrentTasks: 1,
       ));
     }
+
+    // Reflex Audit Agent (New in Phase 9)
+    if (registry.getAgent('ReflexAudit') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'ReflexAudit',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_safety_audit',
+            name: 'Safety Audit',
+            category: CapabilityCategory.custom,
+            proficiency: 1.0,
+            keywords: ['safety', 'audit', 'reflex', 'quarantine', 'judge'],
+          ),
+        ],
+        maxConcurrentTasks: 5, // High availability for safety
+      ));
+    }
   }
 
   /// Create a custom agent profile
