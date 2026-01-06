@@ -1,6 +1,0 @@
-{
-  "main": "index.js",
-  "dependencies": {
-    "livekit-server-sdk": "^1.2.6"
-  }
-}
