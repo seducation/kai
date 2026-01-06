@@ -7,6 +7,7 @@ import 'step_stream_widget.dart';
 import 'visual_orchestration_screen.dart';
 import 'api_key_settings_screen.dart';
 import '../services/api_key_manager.dart';
+import 'system_status_row.dart';
 
 /// Dashboard showing all agents and their status.
 /// Provides overview of the multi-agent system.
@@ -43,23 +44,30 @@ class _AgentDashboardState extends State<AgentDashboard> {
         // Header
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              const Text(
-                '🤖 Agent Dashboard',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  const Text(
+                    '🤖 Agent Dashboard',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${agents.length} agents',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                '${agents.length} agents',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
+              const SizedBox(height: 12),
+              // System Health & Sleep Status
+              const SystemStatusRow(),
             ],
           ),
         ),

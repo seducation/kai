@@ -42,23 +42,36 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 - **Specialized Dashboards**:
   - **Failure Vault UI**: Manage failures and history.
   - **Audit & Lineage UI**: Inspect training history and dataset provenance.
+  - **System Health & Sleep**: Real-time biological monitoring.
+
+### 8. Autonomic Nervous System 🩹
+- **Heartbeat Loop**: Runs a background pulse every 30s to monitor system health and storage integrity.
+- **Self-Healing**: Automatically detects and repairs minor file system corruption and storage quota issues.
+- **Health Indicators**: Visual monitoring of system state (Healthy, Degraded, Critical).
+
+### 9. Sleep Mode & Optimization 😴
+- **Idle Optimization**: The "Brain" enters sleep mode after 5 minutes of user inactivity.
+- **Sleep Stages**:
+  - **Light Sleep**: Cleans temporary cache and deletes discarded intermediate files.
+  - **Deep Sleep**: Compacts execution history and re-indexes the failure vault.
+- **Instant Wake**: All background processes yield immediately when the user interacts or sends a request.
 
 ## 🛠️ Tech Stack & Architecture
 
 - **Framework**: Flutter (Dart)
 - **Architecture**:
-  - **ControllerAgent**: The brain that orchestrates the workflow.
-  - **AgentBase**: Enforces the "Action → Log → Result" rule (Transparancy).
-  - **StorageAgent**: Manages the local file system Knowledge Vault.
-  - **AppwriteFunctionAgent**: Specialized agent for executing serverless-style logic.
-- **Models**: Unified `AgentGraph`, `GraphNode`, and `AgentStep` schemas.
+  - **ControllerAgent**: The central nervous system.
+  - **PlannerAgent**: The cognitive frontal lobe for strategic planning.
+  - **ReliabilityTracker**: The performance-based hippocampus (memory).
+  - **AutonomicSystem**: The involuntary nervous system for health maintenance.
+  - **SleepManager**: The circadian management for resource optimization.
 
 ## 🚀 Getting Started
 
 1. **Setup API Keys**: Add your OpenAI/Gemini keys in the Settings screen.
 2. **Configure Zones**: Set up storage zones in the **Storage Settings**.
 3. **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
-4. **Monitor**: Use the **Execution Panel** and **Failure Vault** to track and debug.
+4. **Monitor Health**: Keep an eye on the **System Health** pulse on the dashboard.
 
 ## 📝 Planned Improvements
 - [ ] LLM-powered Graph Hallucination.

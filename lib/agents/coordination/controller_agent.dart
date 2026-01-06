@@ -13,6 +13,8 @@ import 'planner_agent.dart';
 import 'reliability_tracker.dart';
 import 'execution_manager.dart';
 import 'agent_capability.dart' show RoutableTask;
+import 'autonomic_system.dart';
+import 'sleep_manager.dart';
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -46,6 +48,8 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   late final PlannerAgent planner;
   final ReliabilityTracker reliability = ReliabilityTracker();
   final ExecutionManager executionManager = ExecutionManager();
+  final AutonomicSystem autonomicSystem = AutonomicSystem();
+  final SleepManager sleepManager = SleepManager();
 
   ControllerAgent({
     required this.registry,
@@ -69,6 +73,10 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   Future<void> _initializeSubsystems() async {
     await reliability.initialize();
     await executionManager.initialize();
+
+    // Start life support
+    autonomicSystem.start();
+    sleepManager.start();
 
     // Register capabilities if not already done
     // In a real app, this would happen dynamically as agents register
@@ -309,7 +317,15 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     // Step 4: Mark complete
     logStatus(StepType.complete, userRequest, StepStatus.success);
 
+    // Reset sleep timer
+    notifyActivity();
+
     return result;
+  }
+
+  /// Notify that the system is active (reset sleep timer)
+  void notifyActivity() {
+    sleepManager.notifyActivity();
   }
 
   /// Create an action plan for the request
