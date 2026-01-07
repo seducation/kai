@@ -5,6 +5,7 @@ import '../core/step_schema.dart';
 import 'organs/speech_organ.dart';
 import 'social/external_interface.dart';
 import 'systems/limbic_system.dart';
+import 'systems/persona_gateway.dart';
 
 /// Social Agent 🤝
 ///
@@ -13,6 +14,7 @@ import 'systems/limbic_system.dart';
 class SocialAgent extends AgentBase {
   final SpeechOrgan speech = SpeechOrgan();
   final List<ExternalInterface> interfaces = [];
+  final PersonaGateway persona = PersonaGateway();
 
   SocialAgent({super.logger}) : super(name: 'SocialAgent');
 
@@ -38,10 +40,13 @@ class SocialAgent extends AgentBase {
         logStatus(
             StepType.modify, 'Formulating response...', StepStatus.running);
 
-        // 1. Humanize the content via Broca's Area
-        final message = await speech.run<String>(input);
+        // 1. Humanize the content via Broca's Area (Adds emotion/context)
+        final humanized = await speech.run<String>(input);
 
-        // 2. Broadcast to all interfaces
+        // 2. Persona Pass (Enforces JARVIS tone and brevity)
+        final message = persona.process(humanized);
+
+        // 3. Broadcast to all interfaces
         int sentCount = 0;
         for (final interface in interfaces) {
           try {

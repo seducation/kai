@@ -3,6 +3,24 @@ import 'step_logger.dart';
 import 'step_schema.dart';
 import 'step_types.dart';
 
+/// Token for cancelling agent execution
+class CancellationToken {
+  bool _isCancelled = false;
+  bool get isCancelled => _isCancelled;
+
+  void cancel() {
+    _isCancelled = true;
+  }
+}
+
+/// Exception thrown when a task is cancelled
+class CancelledException implements Exception {
+  final String message;
+  CancelledException([this.message = 'Task was cancelled']);
+  @override
+  String toString() => 'CancelledException: $message';
+}
+
 /// Abstract base class for all agents.
 /// Enforces auto-logging - agents CANNOT perform actions without logging.
 /// This is how we ensure execution transparency.
@@ -15,6 +33,9 @@ abstract class AgentBase {
 
   /// Whether this agent is currently executing
   bool _isExecuting = false;
+
+  /// Current cancellation token
+  CancellationToken? _activeToken;
 
   AgentBase({
     required this.name,
@@ -33,6 +54,8 @@ abstract class AgentBase {
     required Future<T> Function() task,
     Map<String, dynamic>? metadata,
   }) async {
+    throwIfCancelled();
+
     final stopwatch = Stopwatch()..start();
 
     // Log step start
@@ -47,6 +70,8 @@ abstract class AgentBase {
       // Execute the actual task
       final result = await task();
 
+      throwIfCancelled();
+
       stopwatch.stop();
 
       // Log success
@@ -60,15 +85,30 @@ abstract class AgentBase {
     } catch (e) {
       stopwatch.stop();
 
-      // Log failure
-      logger.failStep(
-        stepId: step.stepId,
-        errorMessage: e.toString(),
-        duration: stopwatch.elapsed,
-      );
+      // Log failure (if not already failed via throwIfCancelled)
+      if (e is CancelledException) {
+        logger.failStep(
+          stepId: step.stepId,
+          errorMessage: 'Interrupt: User or System requested stop.',
+          duration: stopwatch.elapsed,
+        );
+      } else {
+        logger.failStep(
+          stepId: step.stepId,
+          errorMessage: e.toString(),
+          duration: stopwatch.elapsed,
+        );
+      }
 
       // Re-throw for caller to handle
       rethrow;
+    }
+  }
+
+  /// Helper to check if task was interrupted
+  void throwIfCancelled() {
+    if (_activeToken?.isCancelled ?? false) {
+      throw CancelledException('Agent $name was interrupted.');
     }
   }
 
@@ -116,22 +156,24 @@ abstract class AgentBase {
   }
 
   /// Start execution context
-  void _startExecution() {
+  void _startExecution(CancellationToken? token) {
     if (_isExecuting) {
       throw StateError('$name is already executing');
     }
     _isExecuting = true;
+    _activeToken = token;
   }
 
   /// End execution context
   void _endExecution() {
     _isExecuting = false;
+    _activeToken = null;
   }
 
   /// Run the agent with a given input.
   /// Subclasses implement the actual logic.
-  Future<R> run<R>(dynamic input) async {
-    _startExecution();
+  Future<R> run<R>(dynamic input, {CancellationToken? token}) async {
+    _startExecution(token);
     try {
       return await onRun<R>(input);
     } finally {

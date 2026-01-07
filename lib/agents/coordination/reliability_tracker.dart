@@ -149,6 +149,24 @@ class AgentReliabilityStats {
     return (baseScore - recentFailurePenalty).clamp(0.0, 1.0);
   }
 
+  /// Calculate Salience Score for a memory/fact
+  /// Higher salience = more "Sticky" and likely to be recalled
+  double calculateSalience({
+    required DateTime timestamp,
+    int impact = 1, // 1-10 (Importance)
+    int success = 1, // 0 for failure, 1 for success
+  }) {
+    final now = DateTime.now();
+    final ageHours = now.difference(timestamp).inHours;
+
+    // Decay function: Salience drops over time
+    // Base = impact x success (Successes are more salient)
+    final baseValue = impact * (success + 1);
+
+    // Decay: value / (age + 1)^0.5
+    return baseValue / (ageHours + 1);
+  }
+
   /// Average execution time
   Duration get averageExecutionTime {
     if (successCount == 0) return Duration.zero;

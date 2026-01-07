@@ -6,13 +6,16 @@ import '../core/step_types.dart';
 import '../core/step_logger.dart';
 import '../orchestration/graph_model.dart';
 import '../specialized/specialized.dart';
+import '../specialized/narrator_agent.dart'; // New
 import 'coordination.dart';
 import 'autonomic_system.dart';
 import 'sleep_manager.dart';
 import 'immune_system.dart';
 import 'reflex_system.dart';
+import 'timing_controller.dart'; // New
 import '../specialized/systems/limbic_system.dart';
-import '../rules/rule_engine.dart'; // New
+import '../specialized/systems/prediction_engine.dart'; // New
+import '../rules/rule_engine.dart';
 import '../rules/rule_definitions.dart'; // New
 
 /// Function type for AI planning
@@ -52,7 +55,10 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   final ImmuneSystem immuneSystem = ImmuneSystem();
   final ReflexSystem reflexSystem = ReflexSystem();
   final MotorSystem motorSystem = MotorSystem();
+  final TimingController timing = TimingController(); // New: Pacing
+  final PredictionEngine prediction = PredictionEngine(); // New: Predictive
   final RuleEngine ruleEngine = RuleEngine(); // New: Supreme Authority
+  late final NarratorAgent narrator; // New: Internal Voice
 
   // Organs (for UI monitoring)
   final Map<String, Organ> organs = {};
@@ -83,6 +89,9 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     // Initialize Rule Engine (Persistence)
     await ruleEngine.initialize();
 
+    // Initialize Narrator (Internal Voice)
+    _initializeNarrator();
+
     // Start life support
     autonomicSystem.start();
     sleepManager.start();
@@ -101,6 +110,18 @@ class ControllerAgent extends AgentBase with AgentDelegation {
 
     // Register capabilities
     AgentProfileSetup.registerDefaults(planner, registry);
+  }
+
+  void _initializeNarrator() {
+    final social = registry.getAgentOfType<SocialAgent>();
+    narrator = NarratorAgent(
+      onNarrate: (msg) {
+        // Only narrate if we have a social channel
+        social?.run(msg);
+      },
+      logger: logger,
+    );
+    narrator.start();
   }
 
   void _initializeOrgans() {
@@ -403,39 +424,67 @@ class ControllerAgent extends AgentBase with AgentDelegation {
           'Request blocked by biological reflex: Dangerous content detected');
     }
 
-    // Step 1: Check if we can handle this locally
-    final canHandle = await execute<bool>(
-      action: StepType.check,
-      target: 'local capabilities',
-      task: () async => registry.count > 0,
-    );
+    // Step 0d: Considered Pacing (Psychological Illusion of Thought)
+    await timing.pace(detectedPriority);
 
-    if (!canHandle) {
-      throw StateError('No agents registered');
+    // Step 0e: Record for Prediction
+    prediction.recordCommand(effectiveRequest);
+
+    try {
+      // Step 1: Check if we can handle this locally
+      final canHandle = await execute<bool>(
+        action: StepType.check,
+        target: 'local capabilities',
+        task: () async => registry.count > 0,
+      );
+
+      if (!canHandle) {
+        throw StateError('No agents registered');
+      }
+
+      // Step 2: Create action plan (Pass detected priority hint)
+      final plan = await execute<ActionPlan>(
+        action: StepType.decide,
+        target: 'action plan for: $effectiveRequest',
+        task: () async =>
+            await _createPlan(effectiveRequest, priority: detectedPriority),
+      );
+
+      // Step 3: Execute the plan
+      final result = await execute<R>(
+        action: StepType.analyze,
+        target: 'executing ${plan.tasks.length} tasks',
+        task: () async => await _executePlan<R>(plan),
+      );
+
+      // Step 4: Mark complete
+      logStatus(StepType.complete, effectiveRequest, StepStatus.success);
+
+      // Reset sleep timer
+      notifyActivity();
+
+      return result;
+    } catch (e) {
+      _admitMistake(e);
+      rethrow;
     }
+  }
 
-    // Step 2: Create action plan (Pass detected priority hint)
-    final plan = await execute<ActionPlan>(
-      action: StepType.decide,
-      target: 'action plan for: $effectiveRequest',
-      task: () async =>
-          await _createPlan(effectiveRequest, priority: detectedPriority),
-    );
+  /// Admitting mistakes increases trust (JARVIS behavior)
+  void _admitMistake(Object error) {
+    final social = registry.getAgentOfType<SocialAgent>();
+    if (social != null) {
+      String msg = 'Encountered an obstacle. ';
+      if (error is SecurityException) {
+        msg = 'Strict protocols prevented this action. ';
+      } else if (error is CancelledException) {
+        msg = 'Operation interrupted by a higher priority task. ';
+      } else {
+        msg += 'I may have miscalculated a dependency. ';
+      }
 
-    // Step 3: Execute the plan
-    final result = await execute<R>(
-      action: StepType.analyze,
-      target: 'executing ${plan.tasks.length} tasks',
-      task: () async => await _executePlan<R>(plan),
-    );
-
-    // Step 4: Mark complete
-    logStatus(StepType.complete, effectiveRequest, StepStatus.success);
-
-    // Reset sleep timer
-    notifyActivity();
-
-    return result;
+      social.run('$msg (Error: $error)');
+    }
   }
 
   /// Simple rule-based priority detection

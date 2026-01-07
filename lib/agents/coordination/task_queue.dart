@@ -49,6 +49,9 @@ class QueuedTask {
   /// When this task was queued
   final DateTime queuedAt;
 
+  /// Token for preemption
+  CancellationToken? token;
+
   /// Completer for async result
   final Completer<dynamic> _completer = Completer<dynamic>();
 
@@ -252,6 +255,8 @@ class TaskQueue {
 
     // If urgent task is higher priority than lowest running
     if (lowestId != null && urgentTask.priority > lowestPriority) {
+      final lowestTask = _tasks[lowestId]!;
+
       // Log preemption event
       logger.logStep(
           agentName: 'System',
@@ -259,6 +264,10 @@ class TaskQueue {
           target:
               'Priority Interrupt: Task ${urgentTask.id} (P${urgentTask.priority}) requested override of Task $lowestId (P$lowestPriority)',
           status: StepStatus.success);
+
+      // Trigger Actual Preemption
+      lowestTask.token?.cancel();
+      lowestTask.status = TaskQueueStatus.paused;
     }
   }
 
@@ -268,14 +277,23 @@ class TaskQueue {
     task.status = TaskQueueStatus.running;
     _runningTasks.add(taskId);
 
+    final token = CancellationToken();
+    task.token = token;
+
     try {
-      final result = await task.agent.run(task.input);
+      final result = await task.agent.run(task.input, token: token);
       task.complete(result);
       _completedTasks.add(taskId);
     } catch (e) {
-      task.fail(e);
+      if (e is CancelledException) {
+        // Re-queue or fail as 'paused'
+        task.fail(e);
+      } else {
+        task.fail(e);
+      }
     } finally {
       _runningTasks.remove(taskId);
+      task.token = null;
       // Check if more tasks can run
       _processQueue();
     }
