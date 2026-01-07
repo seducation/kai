@@ -15,3 +15,5 @@ export 'motor_system.dart';
 export 'actuators.dart';
 export 'organ_base.dart';
 export 'organ_system.dart';
+export 'dreaming_mode.dart';
+export 'dream_report.dart';

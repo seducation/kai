@@ -9,6 +9,7 @@ import '../specialized/organs/volition_organ.dart';
 import 'biological/organ_monitor_widget.dart';
 import 'biological/volition_stream_widget.dart';
 import 'step_stream_widget.dart';
+import 'dream_reports_screen.dart';
 import 'visual_orchestration_screen.dart';
 import 'api_key_settings_screen.dart';
 import 'rule_priority_screen.dart';
@@ -143,6 +144,19 @@ class _AgentDashboardState extends State<AgentDashboard> {
         const Divider(),
 
         // Navigation
+        ListTile(
+          leading: const Icon(Icons.nightlight_round, color: Colors.purple),
+          title: const Text('Dream Reports'),
+          subtitle: const Text('Offline Analysis & Optimization'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DreamReportsScreen(),
+              ),
+            );
+          },
+        ),
         ListTile(
           leading: const Icon(Icons.hub),
           title: const Text('Visual Orchestration'),

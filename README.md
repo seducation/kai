@@ -54,6 +54,7 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 - **Sleep Stages**:
   - **Light Sleep**: Cleans temporary cache and deletes discarded intermediate files.
   - **Deep Sleep**: Compacts execution history and re-indexes the failure vault.
+  - **REM Sleep (Dreaming)**: Triggers Dreaming Mode for autonomous simulation and optimization.
 - **Instant Wake**: All background processes yield immediately when the user interacts or sends a request.
 
 ### 10. Priority + Rule Engine (PRE) ⚖️⚡
@@ -61,7 +62,12 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 - **Priority Scheduler**: Intelligent task queue with integer-based priorities (`Reflex`, `Critical`, `Emergency`, `High`, `Normal`, `Low`).
 - **Interactive Management**: Dedicated **Rules & Priority Engine UI** to monitor active rules and the prioritized task pipeline.
 
-### 11. Behavioral Intelligence (JARVIS-Level) 🎭🔮
+### 11. Behavioral Intelligence (JARVIS-Level: 95% Certified) 🎭🔮
+- **Mission Mode**: Long-running objectives with success criteria, constraints, and automatic progress tracking. The system knows *what* it is trying to achieve.
+- **Counterfactual Simulation**: Before executing high-risk actions (e.g., delete, deploy), the system hallucinates 2-3 possible outcomes, calculates risk scores, and chooses the safest path.
+- **Self-Limitation Awareness**: "I'm not entirely certain." The system honestly reports confidence gaps and refuses to guess when stakes are high.
+- **Authority Escalation**: A rigid 6-tier hierarchy (`Reflex` > `Safety` > `System` > `Mission` > `User` > `Agent`) ensuring the user always retains ultimate control.
+- **Confidence Scoring**: Every plan comes with a visible confidence score (0-100%) and transparency into *why* the AI feels that way.
 - **Persona Gateway**: Enforces a consistent JARVIS-like tone and brevity across all system outputs.
 - **Narrator Agent**: Real-time internal voice providing status updates via Broca's area.
 - **Reactive Preemption**: True task halting using `CancellationToken` for high-priority interrupts.
@@ -80,6 +86,16 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 - **Volition Stream**: A live feed of the AI's "Stream of Consciousness" and internal drives.
 - **Quarantine Zone**: visual management of agents locked by the Reflex System.
 
+### 14. Dreaming Mode (Simulation & Optimization) 🌙
+- **Sandboxed Analysis**: Offline, non-executing phase that runs during REM sleep to optimize system parameters without affecting production.
+- **Core Capabilities**:
+  - **Memory Consolidation**: Links cause→effect and organizes the knowledge vault.
+  - **Failure Pattern Analysis**: Replays failures to detect recurring bugs or bottlenecks.
+  - **Planner Simulation**: Dry-runs alternate execution paths to improve future planning efficiency.
+  - **Rule Conflict Detection**: Finds overlapping, dead, or conflicting deterministic rules.
+- **Human-in-the-Loop**: All AI suggestions are presented as **Recommendations** requiring explicit human approval before being applied.
+- **Safety Kill-Switch**: Actuators are hard-locked, and any attempt to modify system state without approval triggers an immediate abort.
+
 ## 🛠️ Tech Stack & Architecture
 
 - **Framework**: Flutter (Dart)
@@ -89,22 +105,22 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
   - **Autonomic Nervous System**: `AutonomicSystem` (Heartbeat & Health).
   - **Circadian Rhythms**: `SleepManager` (Resource Optimization).
   - **Immune System**: `ImmuneSystem` (Active defense & Safe mode).
+  - **Dreaming State**: `DreamingMode` (Simulation & Analysis).
   - **Spinal Cord (Reflexes)**: `ReflexSystem` (Instant safety).
   - **Muscles (Motor System)**: `MotorSystem` & `EffectorAgent` (External action).
   - **Social Integration**: `SocialAgent`, `SpeechOrgan` (Broca's/Wernicke's), & `ExternalInterfaces` (Webhooks, Appwrite).
+  - **Dream Logic**: `DreamReport` & `DreamRecommendation` (Data structures for optimization).
   - **Limbic System (Emotions)**: `LimbicSystem` (PAD Model - Pleasure, Arousal, Dominance) for emotional context regulating agent responses.
 
 ## 🔮 Future Roadmap (Evolutionary Path)
 
 The system is designed to evolve endlessly. Here are the next phases of life:
 
-1.  **Dreaming (Generative Simulation)** 🌙
-    *   *Concept*: While sleeping, the AI uses `CodeWriterAgent` to refactor its own code or run simulations in a sandbox to "learn" overnight.
-2.  **Reproduction (Mitosis)** 🦠
+1.  **Reproduction (Mitosis)** 🦠
     *   *Concept*: Spawning independent "Child" isolates/processes to handle massive parallel tasks or survive system death.
-3.  **Spatial Interface (VR/3D)** 🌌
+2.  **Spatial Interface (VR/3D)** 🌌
     *   *Concept*: Visualizing the agent network as a 3D galaxy of nodes rather than a 2D graph.
-4.  **Language Acquisition (Mirror Neurons)** 🗣️
+3.  **Language Acquisition (Mirror Neurons)** 🗣️
     *   *Concept*: `SpeechOrgan` adapts its vocabulary and tone based on user interaction style.
 
 ## 🚀 Getting Started

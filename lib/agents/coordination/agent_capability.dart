@@ -191,14 +191,33 @@ enum TaskPriority {
   critical,
 }
 
+/// Confidence level classification for UI display
+enum ConfidenceLevel {
+  /// 80-100%: High confidence, proceed autonomously
+  high,
+
+  /// 60-79%: Moderate confidence, proceed with monitoring
+  moderate,
+
+  /// 40-59%: Low confidence, consider escalation
+  low,
+
+  /// 0-39%: Very low confidence, requires human confirmation
+  uncertain,
+}
+
 /// Result of task routing
 class TaskRouting {
   final RoutableTask task;
   final String assignedAgent;
   final AgentCapability matchedCapability;
   final double confidence;
+  final String confidenceReason; // NEW: Explains why this confidence level
   final PlanningMode mode;
   final DateTime routedAt;
+
+  /// Threshold below which decisions should be escalated
+  static const double ESCALATION_THRESHOLD = 0.6;
 
   TaskRouting({
     required this.task,
@@ -206,8 +225,64 @@ class TaskRouting {
     required this.matchedCapability,
     required this.confidence,
     required this.mode,
+    String? confidenceReason,
     DateTime? routedAt,
-  }) : routedAt = routedAt ?? DateTime.now();
+  })  : confidenceReason = confidenceReason ?? _defaultReason(confidence, mode),
+        routedAt = routedAt ?? DateTime.now();
+
+  /// Generate default confidence reason based on score and mode
+  static String _defaultReason(double confidence, PlanningMode mode) {
+    final pct = (confidence * 100).toStringAsFixed(0);
+
+    switch (mode) {
+      case PlanningMode.manual:
+        return 'Manual assignment by user';
+      case PlanningMode.deterministic:
+        if (confidence >= 0.8) {
+          return 'High capability match ($pct%)';
+        } else if (confidence >= 0.6) {
+          return 'Moderate capability match ($pct%)';
+        } else {
+          return 'Low capability match ($pct%) — recommend verification';
+        }
+      case PlanningMode.exploratory:
+        return 'Exploratory attempt — limited history';
+      case PlanningMode.hybrid:
+        if (confidence >= 0.6) {
+          return 'Hybrid routing: deterministic path ($pct%)';
+        } else {
+          return 'Hybrid routing: exploratory fallback ($pct%)';
+        }
+    }
+  }
+
+  /// Get confidence level classification
+  ConfidenceLevel get confidenceLevel {
+    if (confidence >= 0.8) return ConfidenceLevel.high;
+    if (confidence >= 0.6) return ConfidenceLevel.moderate;
+    if (confidence >= 0.4) return ConfidenceLevel.low;
+    return ConfidenceLevel.uncertain;
+  }
+
+  /// Check if this decision should be escalated for human review
+  bool get shouldEscalate => confidence < ESCALATION_THRESHOLD;
+
+  /// Human-readable confidence display
+  String get confidenceDisplay => '${(confidence * 100).toStringAsFixed(0)}%';
+
+  /// Emoji indicator for quick visual feedback
+  String get confidenceEmoji {
+    switch (confidenceLevel) {
+      case ConfidenceLevel.high:
+        return '🟢';
+      case ConfidenceLevel.moderate:
+        return '🟡';
+      case ConfidenceLevel.low:
+        return '🟠';
+      case ConfidenceLevel.uncertain:
+        return '🔴';
+    }
+  }
 }
 
 /// Planning modes

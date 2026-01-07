@@ -257,6 +257,27 @@ class RuleEngine {
       explanation: 'Systematically defers background maintenance tasks.',
     ));
 
+    // 7. Simulate high-risk actions
+    addRule(Rule(
+      id: 'SIM-001',
+      type: RuleType.safety,
+      scope: RuleScope.global,
+      condition: 'contains: "delete"',
+      action: RuleAction.simulate,
+      priority: 500,
+      explanation: 'Requires simulation for deletion operations.',
+    ));
+
+    addRule(Rule(
+      id: 'SIM-002',
+      type: RuleType.safety,
+      scope: RuleScope.global,
+      condition: 'contains: "deploy"',
+      action: RuleAction.simulate,
+      priority: 500,
+      explanation: 'Requires simulation for deployment operations.',
+    ));
+
     _saveRules();
   }
 }

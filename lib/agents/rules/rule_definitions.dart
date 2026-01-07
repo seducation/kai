@@ -21,6 +21,76 @@ class PriorityLevel {
   }
 }
 
+/// Authority Escalation Ladder 🎖️
+///
+/// Explicit hierarchy for conflict resolution. JARVIS always knows who is in charge.
+/// Higher priority = higher authority (absolute override).
+///
+/// Order of authority (highest to lowest):
+/// 1. Reflex (1000) - Absolute, instant safety (Spinal Cord)
+/// 2. Safety Rule (900) - Immutable safety rules
+/// 3. System Rule (500) - Configurable system constraints
+/// 4. Mission Constraint (400) - Mission-specific limitations
+/// 5. User Intent (300) - Direct user requests
+/// 6. Agent Suggestion (100) - AI recommendations
+enum AuthorityLevel {
+  /// Absolute - blocks instantly (Reflex System)
+  /// Cannot be overridden by anyone or anything.
+  reflex(1000),
+
+  /// Immutable safety rules that protect the system and user.
+  /// These are hardcoded and cannot be modified by LLMs.
+  safetyRule(900),
+
+  /// Configurable system rules that govern behavior.
+  /// Can be modified by admins but not by LLMs autonomously.
+  systemRule(500),
+
+  /// Mission-specific constraints set for long-running objectives.
+  /// Bound to active missions only.
+  missionConstraint(400),
+
+  /// Direct user requests and intent expressions.
+  /// The primary driver of action.
+  userIntent(300),
+
+  /// AI recommendations and suggestions.
+  /// Can be overridden by any higher authority.
+  agentSuggestion(100);
+
+  const AuthorityLevel(this.priority);
+  final int priority;
+
+  /// Resolve conflicts between two authority levels.
+  /// Higher priority wins.
+  static AuthorityLevel resolveConflict(AuthorityLevel a, AuthorityLevel b) {
+    return a.priority > b.priority ? a : b;
+  }
+
+  /// Check if this authority level can override another.
+  bool canOverride(AuthorityLevel other) {
+    return priority > other.priority;
+  }
+
+  /// Human-readable name for UI display
+  String get displayName {
+    switch (this) {
+      case AuthorityLevel.reflex:
+        return 'Reflex (Absolute)';
+      case AuthorityLevel.safetyRule:
+        return 'Safety Rule';
+      case AuthorityLevel.systemRule:
+        return 'System Rule';
+      case AuthorityLevel.missionConstraint:
+        return 'Mission Constraint';
+      case AuthorityLevel.userIntent:
+        return 'User Intent';
+      case AuthorityLevel.agentSuggestion:
+        return 'Agent Suggestion';
+    }
+  }
+}
+
 /// Types of rules enforced by the engine.
 enum RuleType {
   safety, // Prevent irreversible damage (Never override)
@@ -46,6 +116,7 @@ enum RuleAction {
   modify, // Rewrite intent/parameters
   escalate, // Require human/higher approval
   defer, // Lower priority or wait
+  simulate, // Run counterfactual simulation (NEW)
 }
 
 /// A deterministic rule governing system behavior.
@@ -59,6 +130,8 @@ class Rule {
   final int priority; // Rule evaluation priority (higher = checked first)
   final String explanation;
   final bool immutable; // Can be modified by SystemAgent?
+  final AuthorityLevel
+      authority; // NEW: Authority level for conflict resolution
 
   const Rule({
     required this.id,
@@ -70,6 +143,7 @@ class Rule {
     this.priority = 10,
     required this.explanation,
     this.immutable = false,
+    this.authority = AuthorityLevel.systemRule, // Default to system rule
   });
 
   Map<String, dynamic> toJson() => {
@@ -82,6 +156,7 @@ class Rule {
         'priority': priority,
         'explanation': explanation,
         'immutable': immutable,
+        'authority': authority.index,
       };
 
   factory Rule.fromJson(Map<String, dynamic> json) {
@@ -95,6 +170,9 @@ class Rule {
       priority: json['priority'] ?? 10,
       explanation: json['explanation'],
       immutable: json['immutable'] ?? false,
+      authority: json['authority'] != null
+          ? AuthorityLevel.values[json['authority']]
+          : AuthorityLevel.systemRule,
     );
   }
 }

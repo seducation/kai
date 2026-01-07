@@ -17,6 +17,8 @@ import '../specialized/systems/limbic_system.dart';
 import '../specialized/systems/prediction_engine.dart'; // New
 import '../rules/rule_engine.dart';
 import '../rules/rule_definitions.dart'; // New
+import 'mission_controller.dart'; // New (Mission Mode)
+import 'simulation_engine.dart'; // New (Counterfactuals)
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -95,6 +97,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     // Start life support
     autonomicSystem.start();
     sleepManager.start();
+    missionController.start(); // Start Mission Monitor
 
     // Start active defense
     immuneSystem.start();
@@ -405,7 +408,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
       requestedPriority: detectedPriority,
     ));
 
-    if (!ruleResult.isAllowed) {
+    if (!ruleResult.isAllowed && ruleResult.action != RuleAction.simulate) {
       logStatus(
           StepType.error,
           'Blocked by Rule Engine: ${ruleResult.explanation}',
@@ -424,11 +427,45 @@ class ControllerAgent extends AgentBase with AgentDelegation {
           'Request blocked by biological reflex: Dangerous content detected');
     }
 
+    // Step 0g: Counterfactual Simulation (Dynamic Safety)
+    if (ruleResult.action == RuleAction.simulate ||
+        simulationEngine.shouldSimulate(effectiveRequest)) {
+      final simResults = await simulationEngine.simulateAction(
+        agentName: name,
+        action: effectiveRequest,
+      );
+
+      if (!simulationEngine.shouldProceed(simResults)) {
+        final warning = simResults.isNotEmpty
+            ? simResults.first.predictedOutcome
+            : 'High risk detected';
+
+        logStatus(StepType.error, 'Blocked by Simulation: $warning',
+            StepStatus.failed);
+        throw SecurityException(
+            'Action blocked by counterfactual simulation: $warning');
+      }
+
+      logger.logStep(
+        agentName: name,
+        action: StepType.check,
+        target: 'Simulation passed: ${simResults.first.riskEmoji}',
+        status: StepStatus.success,
+      );
+    }
+
     // Step 0d: Considered Pacing (Psychological Illusion of Thought)
     await timing.pace(detectedPriority);
 
     // Step 0e: Record for Prediction
     prediction.recordCommand(effectiveRequest);
+
+    // Step 0f: Mission Constraints (Long-running context)
+    if (!missionController.checkConstraints(effectiveRequest)) {
+      logStatus(
+          StepType.error, 'Blocked by Mission Constraints', StepStatus.failed);
+      throw SecurityException('Request blocked by active mission constraints');
+    }
 
     try {
       // Step 1: Check if we can handle this locally
