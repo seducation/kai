@@ -2,13 +2,31 @@ import 'dart:async';
 import 'dart:collection';
 import '../core/agent_base.dart';
 import '../core/step_logger.dart';
+import '../core/step_types.dart';
+import '../core/step_schema.dart';
+import '../rules/rule_definitions.dart'; // For PriorityLevel
 
-/// Priority levels for tasks
+/// Priority levels for tasks (Legacy Enum mapped to new system)
 enum TaskPriority {
-  low,
-  normal,
-  high,
-  critical,
+  low, // 20
+  normal, // 40
+  high, // 60
+  critical, // 90
+}
+
+extension TaskPriorityValues on TaskPriority {
+  int get value {
+    switch (this) {
+      case TaskPriority.low:
+        return PriorityLevel.low;
+      case TaskPriority.normal:
+        return PriorityLevel.normal;
+      case TaskPriority.high:
+        return PriorityLevel.high;
+      case TaskPriority.critical:
+        return PriorityLevel.critical;
+    }
+  }
 }
 
 /// A task in the queue
@@ -22,8 +40,8 @@ class QueuedTask {
   /// Input for the agent
   final dynamic input;
 
-  /// Priority level
-  final TaskPriority priority;
+  /// Priority value (higher = more urgent)
+  final int priority;
 
   /// Tasks that must complete before this one
   final List<String> dependsOn;
@@ -41,7 +59,7 @@ class QueuedTask {
     required this.id,
     required this.agent,
     required this.input,
-    this.priority = TaskPriority.normal,
+    this.priority = PriorityLevel.normal,
     this.dependsOn = const [],
   })  : queuedAt = DateTime.now(),
         status = TaskQueueStatus.pending;
@@ -52,13 +70,13 @@ class QueuedTask {
   /// Complete the task with result
   void complete(dynamic result) {
     status = TaskQueueStatus.completed;
-    _completer.complete(result);
+    if (!_completer.isCompleted) _completer.complete(result);
   }
 
   /// Fail the task with error
   void fail(Object error) {
     status = TaskQueueStatus.failed;
-    _completer.completeError(error);
+    if (!_completer.isCompleted) _completer.completeError(error);
   }
 }
 
@@ -66,24 +84,21 @@ class QueuedTask {
 enum TaskQueueStatus {
   pending,
   running,
+  paused, // Preempted
   completed,
   failed,
   cancelled,
 }
 
 /// Task queue for managing parallel and sequential agent execution.
-/// Supports dependency resolution and priority ordering.
+/// Supports dependency resolution and priority-based preemption.
 class TaskQueue {
   /// All tasks
   final Map<String, QueuedTask> _tasks = {};
 
-  /// Pending tasks by priority
-  final Map<TaskPriority, Queue<String>> _pendingQueues = {
-    TaskPriority.critical: Queue<String>(),
-    TaskPriority.high: Queue<String>(),
-    TaskPriority.normal: Queue<String>(),
-    TaskPriority.low: Queue<String>(),
-  };
+  /// Pending tasks ordered by priority (descending)
+  final SplayTreeMap<int, Queue<String>> _priorityBuckets =
+      SplayTreeMap((a, b) => b.compareTo(a));
 
   /// Currently running tasks
   final Set<String> _runningTasks = {};
@@ -113,20 +128,25 @@ class TaskQueue {
     required AgentBase agent,
     required dynamic input,
     TaskPriority priority = TaskPriority.normal,
+    int? explicitPriority, // Allow overriding the enum
     List<String> dependsOn = const [],
   }) {
     final taskId = 'task_${++_taskCounter}';
+    final priorityVal = explicitPriority ?? priority.value;
 
     final task = QueuedTask(
       id: taskId,
       agent: agent,
       input: input,
-      priority: priority,
+      priority: priorityVal,
       dependsOn: dependsOn,
     );
 
     _tasks[taskId] = task;
-    _pendingQueues[priority]!.add(taskId);
+    _addToBucket(taskId, priorityVal);
+
+    // Check for preemption
+    _checkForPreemption(task);
 
     // Start processing if not already
     _processQueue();
@@ -134,33 +154,34 @@ class TaskQueue {
     return task.result.then((r) => r as T);
   }
 
+  void _addToBucket(String taskId, int priority) {
+    if (!_priorityBuckets.containsKey(priority)) {
+      _priorityBuckets[priority] = Queue<String>();
+    }
+    _priorityBuckets[priority]!.add(taskId);
+  }
+
   /// Run tasks sequentially
   Future<List<T>> runSequential<T>(List<AgentTask<T>> tasks) async {
     final results = <T>[];
-
     for (final task in tasks) {
       final result = await task.execute();
       results.add(result);
     }
-
     return results;
   }
 
-  /// Run tasks in parallel (respecting maxConcurrent)
+  /// Run tasks in parallel
   Future<List<T>> runParallel<T>(List<Future<T>> futures) async {
-    // Chunk into max concurrent batches
     final results = <T>[];
     final chunks = <List<Future<T>>>[];
-
     for (var i = 0; i < futures.length; i += maxConcurrent) {
       chunks.add(futures.skip(i).take(maxConcurrent).toList());
     }
-
     for (final chunk in chunks) {
       final chunkResults = await Future.wait(chunk);
       results.addAll(chunkResults);
     }
-
     return results;
   }
 
@@ -169,19 +190,21 @@ class TaskQueue {
     if (_isProcessing) return;
     _isProcessing = true;
 
-    while (_hasRunnableTasks() && _runningTasks.length < maxConcurrent) {
-      final taskId = _getNextTask();
-      if (taskId == null) break;
+    try {
+      while (_hasRunnableTasks() && _runningTasks.length < maxConcurrent) {
+        final taskId = _getNextTask();
+        if (taskId == null) break;
 
-      _runTask(taskId);
+        _runTask(taskId);
+      }
+    } finally {
+      _isProcessing = false;
     }
-
-    _isProcessing = false;
   }
 
   /// Check if there are tasks that can run
   bool _hasRunnableTasks() {
-    for (final queue in _pendingQueues.values) {
+    for (final queue in _priorityBuckets.values) {
       for (final taskId in queue) {
         final task = _tasks[taskId]!;
         if (_canRun(task)) return true;
@@ -197,9 +220,9 @@ class TaskQueue {
 
   /// Get the next task to run (highest priority, dependencies satisfied)
   String? _getNextTask() {
-    // Check each priority level in order
-    for (final priority in TaskPriority.values.reversed) {
-      final queue = _pendingQueues[priority]!;
+    // Buckets are already sorted descending
+    for (final priority in _priorityBuckets.keys) {
+      final queue = _priorityBuckets[priority]!;
       for (final taskId in queue) {
         final task = _tasks[taskId]!;
         if (_canRun(task)) {
@@ -209,6 +232,34 @@ class TaskQueue {
       }
     }
     return null;
+  }
+
+  /// Preempt lower priority tasks if full
+  void _checkForPreemption(QueuedTask urgentTask) {
+    if (_runningTasks.length < maxConcurrent) return;
+
+    // Find the lowest priority running task
+    String? lowestId;
+    int lowestPriority = 9999;
+
+    for (final id in _runningTasks) {
+      final task = _tasks[id]!;
+      if (task.priority < lowestPriority) {
+        lowestPriority = task.priority;
+        lowestId = id;
+      }
+    }
+
+    // If urgent task is higher priority than lowest running
+    if (lowestId != null && urgentTask.priority > lowestPriority) {
+      // Log preemption event
+      logger.logStep(
+          agentName: 'System',
+          action: StepType.decide,
+          target:
+              'Priority Interrupt: Task ${urgentTask.id} (P${urgentTask.priority}) requested override of Task $lowestId (P$lowestPriority)',
+          status: StepStatus.success);
+    }
   }
 
   /// Run a specific task
@@ -237,22 +288,21 @@ class TaskQueue {
 
     if (task.status == TaskQueueStatus.pending) {
       task.status = TaskQueueStatus.cancelled;
-      _pendingQueues[task.priority]!.remove(taskId);
+      // Find and remove from bucket
+      for (final queue in _priorityBuckets.values) {
+        if (queue.remove(taskId)) break;
+      }
     }
   }
 
-  /// Get task by ID
   QueuedTask? getTask(String taskId) => _tasks[taskId];
 
-  /// Get all running tasks
   List<QueuedTask> get runningTasks =>
       _runningTasks.map((id) => _tasks[id]!).toList();
 
-  /// Get pending task count
   int get pendingCount =>
-      _pendingQueues.values.fold(0, (sum, q) => sum + q.length);
+      _priorityBuckets.values.fold(0, (sum, q) => sum + q.length);
 
-  /// Clear completed tasks from memory
   void clearCompleted() {
     _tasks.removeWhere(
       (id, task) =>

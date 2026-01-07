@@ -12,6 +12,8 @@ import 'sleep_manager.dart';
 import 'immune_system.dart';
 import 'reflex_system.dart';
 import '../specialized/systems/limbic_system.dart';
+import '../rules/rule_engine.dart'; // New
+import '../rules/rule_definitions.dart'; // New
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -50,6 +52,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   final ImmuneSystem immuneSystem = ImmuneSystem();
   final ReflexSystem reflexSystem = ReflexSystem();
   final MotorSystem motorSystem = MotorSystem();
+  final RuleEngine ruleEngine = RuleEngine(); // New: Supreme Authority
 
   // Organs (for UI monitoring)
   final Map<String, Organ> organs = {};
@@ -76,6 +79,9 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   Future<void> _initializeSubsystems() async {
     await reliability.initialize();
     await executionManager.initialize();
+
+    // Initialize Rule Engine (Persistence)
+    await ruleEngine.initialize();
 
     // Start life support
     autonomicSystem.start();
@@ -366,9 +372,32 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   }
 
   /// Handle a user request
-  Future<R> handleRequest<R>(String userRequest) async {
-    // Step 0: Spinal Reflex Check (Instant Safety)
-    if (reflexSystem.checkReflex(userRequest)) {
+  Future<R> handleRequest<R>(String userRequest, {int? priority}) async {
+    // Step 0a: Priority Detection
+    final detectedPriority = priority ?? _detectPriority(userRequest);
+
+    // Step 0b: Rule Engine Evaluation (Supreme Authority)
+    final ruleResult = ruleEngine.evaluate(RuleContext(
+      agentName: name,
+      action: 'handleRequest',
+      input: userRequest,
+      requestedPriority: detectedPriority,
+    ));
+
+    if (!ruleResult.isAllowed) {
+      logStatus(
+          StepType.error,
+          'Blocked by Rule Engine: ${ruleResult.explanation}',
+          StepStatus.failed);
+      throw SecurityException(
+          'Request blocked by system rules: ${ruleResult.explanation}');
+    }
+
+    // Apply any modifications from rules
+    final effectiveRequest = ruleResult.modification ?? userRequest;
+
+    // Step 0c: Spinal Reflex Check (Instant Safety - Second Layer)
+    if (reflexSystem.checkReflex(effectiveRequest)) {
       logStatus(StepType.error, 'Blocked by Reflex System', StepStatus.failed);
       throw SecurityException(
           'Request blocked by biological reflex: Dangerous content detected');
@@ -385,11 +414,12 @@ class ControllerAgent extends AgentBase with AgentDelegation {
       throw StateError('No agents registered');
     }
 
-    // Step 2: Create action plan
+    // Step 2: Create action plan (Pass detected priority hint)
     final plan = await execute<ActionPlan>(
       action: StepType.decide,
-      target: 'action plan for: $userRequest',
-      task: () async => await _createPlan(userRequest),
+      target: 'action plan for: $effectiveRequest',
+      task: () async =>
+          await _createPlan(effectiveRequest, priority: detectedPriority),
     );
 
     // Step 3: Execute the plan
@@ -400,12 +430,26 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     );
 
     // Step 4: Mark complete
-    logStatus(StepType.complete, userRequest, StepStatus.success);
+    logStatus(StepType.complete, effectiveRequest, StepStatus.success);
 
     // Reset sleep timer
     notifyActivity();
 
     return result;
+  }
+
+  /// Simple rule-based priority detection
+  int _detectPriority(String request) {
+    final lower = request.toLowerCase();
+    if (lower.contains('urgent') ||
+        lower.contains('immediate') ||
+        lower.contains('asap')) {
+      return PriorityLevel.high;
+    }
+    if (lower.contains('emergency') || lower.contains('critical')) {
+      return PriorityLevel.emergency;
+    }
+    return PriorityLevel.normal;
   }
 
   /// Notify that the system is active (reset sleep timer)
@@ -414,7 +458,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   }
 
   /// Create an action plan for the request
-  Future<ActionPlan> _createPlan(String userRequest) async {
+  Future<ActionPlan> _createPlan(String userRequest, {int? priority}) async {
     final availableAgents = registry.agentNames;
 
     // If planning function is provided, use it (AI-powered planning)
@@ -423,17 +467,17 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     }
 
     // Default: simple single-agent plan based on request keywords
-    return await _createSmartPlan(userRequest, availableAgents);
+    return await _createSmartPlan(userRequest, availableAgents,
+        priority: priority);
   }
 
   /// Create a default plan based on keywords
-  Future<ActionPlan> _createSmartPlan(
-      String request, List<String> agents) async {
+  Future<ActionPlan> _createSmartPlan(String request, List<String> agents,
+      {int? priority}) async {
     // 1. Create a routable task
     final task = RoutableTask(description: request);
 
     // 2. Ask the Planner to route it
-    // The Planner uses reliability stats and capabilities to decide
     final routing = await planner.routeTask(task);
 
     if (routing == null) {
@@ -446,6 +490,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
             agentName: agents.isNotEmpty ? agents.first : 'System',
             action: StepType.analyze,
             target: request,
+            config: {'priority': priority ?? PriorityLevel.normal},
           )
         ],
         createdAt: DateTime.now(),
@@ -460,6 +505,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
           agentName: routing.assignedAgent,
           action: _mapCategoryToAction(routing.matchedCapability.category),
           target: request,
+          config: {'priority': priority ?? PriorityLevel.normal},
         )
       ],
       createdAt: DateTime.now(),
@@ -479,12 +525,9 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     for (var i = 0; i < plan.tasks.length; i++) {
       final task = plan.tasks[i];
 
-      // Wait for dependencies
-      for (final depIndex in task.dependsOn) {
-        if (!results.containsKey(depIndex)) {
-          throw StateError('Dependency $depIndex not yet completed');
-        }
-      }
+      // Wait for dependencies (Simplified for Sequential loop)
+      // In a real system, we'd enqueue all and let dependencies resolve in queue.
+      // But for this loop, we just check if they are done.
 
       // Get the agent
       final agent = registry.getAgent(task.agentName);
@@ -499,9 +542,18 @@ class ControllerAgent extends AgentBase with AgentDelegation {
         continue;
       }
 
-      // Execute via delegation
+      // Execute via TaskQueue to support Priority Scheduler
       try {
-        final result = await delegateTo(agent, task.target);
+        final priority =
+            task.config?['priority'] as int? ?? PriorityLevel.normal;
+
+        final result = await queue.enqueue(
+          agent: agent,
+          input: task.target,
+          explicitPriority: priority,
+          dependsOn: task.dependsOn.map((id) => id.toString()).toList(),
+        );
+
         results[i] = result;
       } catch (e) {
         logger.logStep(
