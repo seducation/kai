@@ -3,6 +3,7 @@ import '../core/step_logger.dart';
 import '../core/step_schema.dart';
 import '../core/step_types.dart';
 import 'agent_registry.dart';
+import '../specialized/systems/user_context.dart';
 
 /// Meta-Cognition System 🧠
 ///
@@ -90,6 +91,17 @@ class MetaCognitionSystem {
       toolName: toolName,
       errorType: errorType,
     );
+
+    // Infer User Sentiment (Layer 2)
+    if (!isSuccess && scorecard.reliabilityScore < 0.5) {
+      // If critical agent failing repeatedly, assume user might be frustrated
+      userContext.update(newMood: UserMood.frustrated);
+    } else if (isSuccess && scorecard.reliabilityScore > 0.9) {
+      // High success might relax the context
+      if (userContext.mood == UserMood.frustrated) {
+        userContext.update(newMood: UserMood.relaxed);
+      }
+    }
 
     // Immediate Bias Check
     // If an agent fails 3 times in a row, it might be stuck in a loop or broken.

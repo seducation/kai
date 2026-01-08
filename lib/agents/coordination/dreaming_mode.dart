@@ -1,9 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import 'dream_report.dart';
@@ -11,7 +7,24 @@ import 'execution_manager.dart';
 import 'message_bus.dart';
 import '../rules/rule_engine.dart';
 
+import '../coordination/agent_registry.dart';
+import '../specialized/systems/user_context.dart';
+import '../specialized/systems/dream_vault.dart';
+
+/// Dream Type - What kind of dream is this?
+enum DreamType {
+  /// Tactical: Re-simulate failed tasks to find better parameters
+  simulation,
+
+  /// Strategic: Optimize workflows
+  optimization,
+
+  /// Replay: Analyze social/interaction logs
+  replay,
+}
+
 /// Safety constraint violation types
+
 enum SafetyViolation {
   actuatorAccess,
   reflexSystemInactive,
@@ -43,6 +56,7 @@ class DreamingMode {
   // Dependencies
   final ExecutionManager _executionManager = ExecutionManager();
   final RuleEngine _ruleEngine = RuleEngine();
+  final DreamVault _vault = DreamVault();
   final MessageBus _bus = messageBus;
 
   // State
@@ -50,16 +64,15 @@ class DreamingMode {
   bool _actuatorsLocked = false;
   bool _vaultReadOnly = false;
   DreamSession? _currentSession;
-  String? _storagePath;
 
   // Stream for dream updates
   final StreamController<DreamReport> _reportStream =
       StreamController.broadcast();
   Stream<DreamReport> get reportStream => _reportStream.stream;
 
-  // History
-  final List<DreamSession> _sessionHistory = [];
-  List<DreamSession> get sessionHistory => List.unmodifiable(_sessionHistory);
+  // Helpers
+  // Proxy history from Vault
+  List<DreamSession> get sessionHistory => _vault.history;
 
   // Getters
   bool get isDreaming => _isDreaming;
@@ -67,15 +80,7 @@ class DreamingMode {
 
   /// Initialize the dreaming mode system
   Future<void> initialize() async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    _storagePath = p.join(docsDir.path, 'brain', 'dreams');
-
-    final dir = Directory(_storagePath!);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-
-    await _loadHistory();
+    await _vault.initialize();
   }
 
   /// Run a complete dream cycle
@@ -93,12 +98,19 @@ class DreamingMode {
     await _enterDreamState();
 
     try {
+      // Determine Dream Type based on context
+      final type = _determineDreamType();
+
       _currentSession = DreamSession(
         id: const Uuid().v4(),
+        type: type,
       );
 
+      // Select capabilities based on Dream Type
+      final capabilities = _getCapabilitiesForType(type);
+
       // Run each capability in sequence
-      for (final capability in DreamCapability.values) {
+      for (final capability in capabilities) {
         // Check if we should abort (user activity detected)
         if (!_isDreaming) {
           _currentSession!.status = DreamStatus.interrupted;
@@ -123,9 +135,8 @@ class DreamingMode {
       }
       _currentSession!.endTime = DateTime.now();
 
-      // Save to history
-      _sessionHistory.add(_currentSession!);
-      await _saveHistory();
+      // Save to Vault
+      await _vault.saveSession(_currentSession!);
 
       return _currentSession;
     } catch (e) {
@@ -412,97 +423,76 @@ class DreamingMode {
     }
   }
 
-  // ============================================================
-  // PERSISTENCE
-  // ============================================================
+  DreamType _determineDreamType() {
+    // 1. Priority: Fix broken agents (Tactical Simulation)
+    final agents = agentRegistry.allAgents;
+    for (final agent in agents) {
+      final scorecard = agentRegistry.getScorecard(agent.name);
+      if (scorecard != null && scorecard.reliabilityScore < 0.7) {
+        return DreamType.simulation;
+      }
+    }
 
-  Future<void> _loadHistory() async {
-    if (_storagePath == null) return;
+    // 2. Priority: Optimize based on User Context
+    // If user is "Focused", they value efficiency -> Optimization
+    if (userContext.mood == UserMood.focused) {
+      return DreamType.optimization;
+    }
 
-    final file = File(p.join(_storagePath!, 'dream_history.json'));
-    if (!await file.exists()) return;
+    // 3. Fallback: Rotate based on time or random
+    // Late night -> Memory Consolidation (Replay)
+    final hour = DateTime.now().hour;
+    if (hour >= 2 && hour < 5) {
+      return DreamType.replay;
+    }
 
-    try {
-      final content = await file.readAsString();
-      final List<dynamic> json = jsonDecode(content);
-      _sessionHistory.clear();
-      _sessionHistory.addAll(
-        json.map((j) => DreamSession.fromJson(j as Map<String, dynamic>)),
-      );
-    } catch (e) {
-      // Failed to load history, start fresh
+    // Default rotation
+    return DreamType.values[DateTime.now().minute % 3];
+  }
+
+  List<DreamCapability> _getCapabilitiesForType(DreamType type) {
+    switch (type) {
+      case DreamType.simulation:
+        return [
+          DreamCapability.tacticalSimulation,
+          DreamCapability.failurePatternAnalysis,
+        ];
+      case DreamType.optimization:
+        return [
+          DreamCapability.strategicOptimization,
+          DreamCapability.structuralAnalysis,
+        ];
+      case DreamType.replay:
+        return [
+          DreamCapability.memoryConsolidation,
+          // Could add SentimentAnalysis capability later
+        ];
     }
   }
 
-  Future<void> _saveHistory() async {
-    if (_storagePath == null) return;
-
-    final file = File(p.join(_storagePath!, 'dream_history.json'));
-    final json = jsonEncode(_sessionHistory.map((s) => s.toJson()).toList());
-    await file.writeAsString(json);
-  }
+  // ============================================================
+  // PERSISTENCE (Delegated to Vault)
+  // ============================================================
 
   /// Get all pending recommendations from all sessions
   List<DreamRecommendation> getPendingRecommendations() {
-    final pending = <DreamRecommendation>[];
-    for (final session in _sessionHistory) {
-      for (final report in session.reports) {
-        pending.addAll(
-          report.recommendations
-              .where((r) => r.status == ApprovalStatus.pending),
-        );
-      }
-    }
-    return pending;
+    return _vault.getPendingRecommendations();
   }
 
-  /// Approve a recommendation
   Future<void> approveRecommendation(String recommendationId) async {
-    for (final session in _sessionHistory) {
-      for (final report in session.reports) {
-        for (final rec in report.recommendations) {
-          if (rec.id == recommendationId) {
-            rec.status = ApprovalStatus.approved;
-            rec.reviewedAt = DateTime.now();
-            await _saveHistory();
-            return;
-          }
-        }
-      }
-    }
+    await _vault.updateRecommendationStatus(
+        recommendationId, ApprovalStatus.approved);
   }
 
-  /// Reject a recommendation
   Future<void> rejectRecommendation(
       String recommendationId, String reason) async {
-    for (final session in _sessionHistory) {
-      for (final report in session.reports) {
-        for (final rec in report.recommendations) {
-          if (rec.id == recommendationId) {
-            rec.status = ApprovalStatus.rejected;
-            rec.reviewedAt = DateTime.now();
-            rec.reviewNote = reason;
-            await _saveHistory();
-            return;
-          }
-        }
-      }
-    }
+    await _vault.updateRecommendationStatus(
+        recommendationId, ApprovalStatus.rejected,
+        note: reason);
   }
 
-  /// Defer a recommendation for later
   Future<void> deferRecommendation(String recommendationId) async {
-    for (final session in _sessionHistory) {
-      for (final report in session.reports) {
-        for (final rec in report.recommendations) {
-          if (rec.id == recommendationId) {
-            rec.status = ApprovalStatus.deferred;
-            rec.reviewedAt = DateTime.now();
-            await _saveHistory();
-            return;
-          }
-        }
-      }
-    }
+    await _vault.updateRecommendationStatus(
+        recommendationId, ApprovalStatus.deferred);
   }
 }

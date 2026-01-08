@@ -59,4 +59,36 @@ class CircadianRhythmTracker {
 
     return sorted.take(3).map((e) => e.key).toList();
   }
+
+  /// Get summary of current temporal context
+  String getTemporalContext() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final day = now.weekday;
+
+    final isMorning = hour >= 5 && hour < 12;
+    final isAfternoon = hour >= 12 && hour < 17;
+    final isEvening = hour >= 17 && hour < 22;
+
+    final dayName = _dayName(day);
+    final period = isMorning
+        ? 'Morning'
+        : (isAfternoon ? 'Afternoon' : (isEvening ? 'Evening' : 'Night'));
+
+    return '$dayName $period';
+  }
+
+  String _dayName(int day) {
+    const days = [
+      '',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    return days[day];
+  }
 }

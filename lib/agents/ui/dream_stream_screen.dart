@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import '../coordination/dreaming_mode.dart';
+import '../specialized/systems/tone_modulator.dart';
+import 'renderers/experiential_renderer.dart';
 
 /// DreamStream Screensaver 🌌
 ///
@@ -112,12 +114,36 @@ class _DreamStreamScreenState extends State<DreamStreamScreen>
 
   @override
   Widget build(BuildContext context) {
+    final tone = ToneModulator().determineTone(
+      priorityLevel: 0, // Dreaming is low priority usually
+      reliabilityScore: 1.0,
+      isDreaming: true,
+      // In a real app we'd pass UserContext too
+    );
+    final style = ToneModulator().getStyle(tone);
+    final themeColor = Color(style.colorHex);
+
     return Scaffold(
       backgroundColor: const Color(0xFF000508), // Deepest Cyber Black
       body: Stack(
         children: [
+          // 0. 3D Wireframe (Deep Background)
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: ExperientialRenderer(
+                    animationValue: _pulseController.value,
+                    color: themeColor,
+                  ),
+                );
+              },
+            ),
+          ),
+
           // 1. Matrix Code Rain (Background)
-          const Positioned.fill(child: _MatrixRain()),
+          Positioned.fill(child: _MatrixRain(color: themeColor)),
 
           // 2. Central Pulse (The Core)
           Center(
@@ -130,8 +156,7 @@ class _DreamStreamScreenState extends State<DreamStreamScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFF7C4DFF)
-                          .withValues(alpha: 0.2), // Deep Purple
+                      themeColor.withValues(alpha: 0.2),
                       Colors.transparent,
                     ],
                   ),
@@ -150,19 +175,19 @@ class _DreamStreamScreenState extends State<DreamStreamScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'DREAM PROTOCOL ACTIVE',
                             style: TextStyle(
                               fontFamily: 'Courier',
-                              color: Color(0xFF7C4DFF),
+                              color: themeColor,
                               letterSpacing: 2.0,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'SYSTEM CONSOLIDATION IN PROGRESS',
                             style: TextStyle(
                               fontFamily: 'Courier',
@@ -209,8 +234,7 @@ class _DreamStreamScreenState extends State<DreamStreamScreen>
                           _logs[index],
                           style: TextStyle(
                             fontFamily: 'Courier',
-                            color:
-                                const Color(0xFF7C4DFF).withValues(alpha: 0.8),
+                            color: themeColor.withValues(alpha: 0.8),
                             fontSize: 12,
                           ),
                         ),
@@ -254,7 +278,8 @@ class _DreamStreamScreenState extends State<DreamStreamScreen>
 
 // Simple "Matrix Rain" effect
 class _MatrixRain extends StatelessWidget {
-  const _MatrixRain();
+  final Color color;
+  const _MatrixRain({required this.color});
 
   @override
   Widget build(BuildContext context) {

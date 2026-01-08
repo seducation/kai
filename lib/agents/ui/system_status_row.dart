@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../coordination/autonomic_system.dart';
 import '../coordination/sleep_manager.dart';
+import '../specialized/systems/tone_modulator.dart';
 
 class SystemStatusRow extends StatelessWidget {
   const SystemStatusRow({super.key});
@@ -9,33 +10,22 @@ class SystemStatusRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Health Indicator
+        // Health Indicator (Neural Style)
         StreamBuilder<SystemHealth>(
           stream: AutonomicSystem().healthStream,
           initialData: AutonomicSystem().currentHealth,
           builder: (context, snapshot) {
             final health = snapshot.data ?? SystemHealth.healthy;
-            Color color;
-            IconData icon;
-            String text;
 
-            switch (health) {
-              case SystemHealth.healthy:
-                color = Colors.green;
-                icon = Icons.favorite;
-                text = 'Healthy';
-                break;
-              case SystemHealth.degraded:
-                color = Colors.orange;
-                icon = Icons.warning;
-                text = 'Degraded';
-                break;
-              case SystemHealth.critical:
-                color = Colors.red;
-                icon = Icons.error;
-                text = 'Critical';
-                break;
-            }
+            // Map Health to Tone for consistent aesthetics
+            final tone = health == SystemHealth.critical
+                ? SystemTone.urgent
+                : (health == SystemHealth.degraded
+                    ? SystemTone.cautionary
+                    : SystemTone.routine);
+
+            final style = ToneModulator().getStyle(tone);
+            final color = Color(style.colorHex);
 
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -47,10 +37,10 @@ class SystemStatusRow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 16, color: color),
+                  Text(style.icon, style: const TextStyle(fontSize: 16)),
                   const SizedBox(width: 6),
                   Text(
-                    text,
+                    health.name.toUpperCase(),
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.bold,

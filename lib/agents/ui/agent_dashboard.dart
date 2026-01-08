@@ -16,7 +16,10 @@ import 'api_key_settings_screen.dart';
 import 'rule_priority_screen.dart';
 import 'system_status_row.dart';
 import 'mission_monitor_screen.dart';
+import 'mission_monitor_screen.dart';
 import 'trust_center_screen.dart';
+import 'world_monitor_screen.dart'; // [NEW] Layer 5
+import 'explainability_screen.dart'; // [NEW] Layer 6
 
 /// Dashboard showing all agents and their status.
 /// Provides overview of the multi-agent system.
@@ -167,6 +170,31 @@ class _AgentDashboardState extends State<AgentDashboard> {
                     );
                   },
                 ),
+              ),
+            );
+          },
+        ListTile(
+          leading: const Icon(Icons.public, color: Colors.blueGrey),
+          title: const Text('World Monitor (Sensory)'),
+          subtitle: const Text('Entities & Events Sandbox'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const WorldMonitorScreen(),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.psychology, color: Colors.amberAccent),
+          title: const Text('Explainability ("Why")'),
+          subtitle: const Text('Decision Logic Inspector'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ExplainabilityScreen(),
               ),
             );
           },

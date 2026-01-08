@@ -42,6 +42,10 @@ abstract class AgentBase {
     StepLogger? logger,
   }) : logger = logger ?? GlobalStepLogger().logger;
 
+  /// Current metabolic stress (0.0 to 1.0).
+  /// High stress increases risk and reduces efficiency.
+  double metabolicStress = 0.0;
+
   /// Check if agent is currently executing
   bool get isExecuting => _isExecuting;
 
@@ -57,6 +61,9 @@ abstract class AgentBase {
     throwIfCancelled();
 
     final stopwatch = Stopwatch()..start();
+
+    // Increase metabolic stress with each action
+    metabolicStress = (metabolicStress + 0.05).clamp(0.0, 1.0);
 
     // Log step start
     final step = logger.startStep(

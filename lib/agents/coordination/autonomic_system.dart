@@ -6,6 +6,7 @@ import '../storage/taxonomy_registry.dart';
 import 'agent_registry.dart';
 import 'organ_base.dart';
 import 'meta_cognition_system.dart';
+import '../world/sensory_system.dart';
 
 /// Autonomic Nervous System - Keeps the system alive and healthy.
 ///
@@ -39,6 +40,9 @@ class AutonomicSystem {
     // Wake up the Meta-Cognitive Layer
     MetaCognitionSystem().start();
 
+    // Start Senses
+    SensorySystem().initialize();
+
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) => _pulse());
     _pulse(); // Initial pulse
   }
@@ -50,6 +54,7 @@ class AutonomicSystem {
     _heartbeatTimer = null;
 
     MetaCognitionSystem().stop();
+    SensorySystem().dispose();
   }
 
   Future<void> _pulse() async {
@@ -115,9 +120,15 @@ class AutonomicSystem {
   }
 
   void _restOrgans() {
-    final organs = agentRegistry.allAgents.whereType<Organ>();
-    for (final organ in organs) {
-      organ.rest();
+    final agents = agentRegistry.allAgents;
+    for (final agent in agents) {
+      // 1. Reduce Metabolic Stress over time
+      agent.metabolicStress = (agent.metabolicStress - 0.02).clamp(0.0, 1.0);
+
+      // 2. Perform organ-specific rest if applicable
+      if (agent is Organ) {
+        agent.rest();
+      }
     }
   }
 }

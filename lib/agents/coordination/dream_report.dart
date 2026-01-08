@@ -1,4 +1,5 @@
 // Dream Mode Data Models
+import 'dreaming_mode.dart';
 
 /// Capability types for Dreaming Mode
 /// Capability types for Dreaming Mode (Multi-Layered)
@@ -229,8 +230,11 @@ class DreamSession {
   final List<DreamReport> reports;
   DreamStatus status;
 
+  final DreamType type;
+
   DreamSession({
     required this.id,
+    this.type = DreamType.simulation,
     DateTime? startTime,
     this.endTime,
     List<DreamReport>? reports,
@@ -249,10 +253,12 @@ class DreamSession {
         'endTime': endTime?.toIso8601String(),
         'reports': reports.map((r) => r.toJson()).toList(),
         'status': status.name,
+        'type': type.name,
       };
 
   factory DreamSession.fromJson(Map<String, dynamic> json) => DreamSession(
         id: json['id'] as String,
+        type: DreamType.values.byName(json['type'] as String? ?? 'simulation'),
         startTime: DateTime.parse(json['startTime'] as String),
         endTime: json['endTime'] != null
             ? DateTime.parse(json['endTime'] as String)

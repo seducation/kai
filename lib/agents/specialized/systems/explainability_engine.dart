@@ -1,5 +1,5 @@
-import 'package:uuid/uuid.dart';
 import 'dart:collection';
+import 'package:uuid/uuid.dart';
 
 /// Types of decisions the system makes
 enum DecisionType {
@@ -39,6 +39,7 @@ class DecisionTrace {
   final String intent; // What were we trying to do?
   final DateTime timestamp;
   final List<DecisionFactor> factors;
+  final String? relatedMemoryId; // Link to "What" (memories)
   String finalOutcome; // "Approved", "Blocked", "Modified"
   double confidenceScore; // 0.0 - 1.0
 
@@ -47,6 +48,7 @@ class DecisionTrace {
     required this.intent,
     required this.timestamp,
     List<DecisionFactor>? factors,
+    this.relatedMemoryId,
     this.finalOutcome = 'Pending',
     this.confidenceScore = 1.0,
   })  : traceId = traceId ?? const Uuid().v4(),
@@ -105,4 +107,36 @@ class ExplainabilityEngine {
   /// Get traces that were blocked
   List<DecisionTrace> get blockedTraces =>
       _history.where((t) => t.finalOutcome == 'Blocked').toList();
+
+  /// Get the "Why Chain" for a memory
+  WhyChain? getWhyChain(String memoryId) {
+    try {
+      final trace = _history.firstWhere((t) => t.relatedMemoryId == memoryId);
+      return WhyChain(trace);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+/// A helper class to traverse the "Why" of a decision
+class WhyChain {
+  final DecisionTrace trace;
+
+  WhyChain(this.trace);
+
+  /// Get the primary reason (highest weight factor)
+  DecisionFactor? get primaryFactor {
+    if (trace.factors.isEmpty) return null;
+    return trace.factors
+        .reduce((a, b) => a.weight.abs() > b.weight.abs() ? a : b);
+  }
+
+  /// Get all blocking factors (negative weight)
+  List<DecisionFactor> get blockers =>
+      trace.factors.where((f) => f.weight < 0).toList();
+
+  /// Get all supporting factors (positive weight)
+  List<DecisionFactor> get supporters =>
+      trace.factors.where((f) => f.weight > 0).toList();
 }

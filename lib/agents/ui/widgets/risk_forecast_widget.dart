@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../coordination/agent_registry.dart';
 
 /// Risk Forecast Widget 🌦️
 ///
@@ -6,20 +7,32 @@ import 'package:flutter/material.dart';
 /// Used in Plan Approval screens to warn users about flaky agents.
 class RiskForecastWidget extends StatelessWidget {
   /// Overall probability of success (0.0 - 1.0)
-  final double successProbability;
+  final double? successProbability;
+
+  final String? agentName;
 
   /// List of risk factors (e.g., "WebCrawler is unstable")
   final List<String> riskFactors;
 
   const RiskForecastWidget({
     super.key,
-    required this.successProbability,
+    this.successProbability,
+    this.agentName,
     this.riskFactors = const [],
   });
 
   @override
   Widget build(BuildContext context) {
-    final status = _getStatus(successProbability);
+    double prob = successProbability ?? 0.95;
+
+    if (agentName != null && successProbability == null) {
+      final scorecard = agentRegistry.getScorecard(agentName!);
+      if (scorecard != null) {
+        prob = scorecard.reliabilityScore;
+      }
+    }
+
+    final status = _getStatus(prob);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -52,7 +65,7 @@ class RiskForecastWidget extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${(successProbability * 100).toInt()}% Success Probability',
+                    '${(prob * 100).toInt()}% Success Probability',
                     style: TextStyle(
                       color: status.color,
                       fontWeight: FontWeight.bold,

@@ -1,16 +1,30 @@
 import '../core/step_schema.dart';
 import '../core/step_types.dart';
+import '../specialized/systems/tone_modulator.dart';
+import '../specialized/systems/user_context.dart';
 
 /// Converts step logs to human-readable text.
 /// The narrator ONLY rephrases logged actions - it NEVER invents steps.
 class NarratorService {
   /// Convert a single step to human-readable text
   String narrate(AgentStep step) {
+    // Neural Wiring: Get current tone from system state
+    // (Simplified: Narrator is passive, would usually get tone from service)
+    final tone = ToneModulator().determineTone(
+      priorityLevel: 40, // Assume normal priority for log readout
+      reliabilityScore: 1.0,
+      isDreaming: false,
+      context: UserContext(),
+    );
+
     final status = step.status.icon;
     final action = _actionToVerb(step.action, step.status);
     final target = _formatTarget(step.target);
 
-    return '$status Step ${step.stepId}: $action $target';
+    final narration = '$status Step ${step.stepId}: $action $target';
+
+    // Apply tone styling
+    return ToneModulator().modulate(narration, tone);
   }
 
   /// Narrate a step with more detail

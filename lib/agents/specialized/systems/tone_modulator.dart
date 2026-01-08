@@ -1,3 +1,6 @@
+import 'user_context.dart';
+import 'circadian_tracker.dart';
+
 /// Tone Modulator (Narrator Personality) 🗣️
 ///
 /// Adapts the "voice" of the system based on context urgency and health.
@@ -7,13 +10,26 @@ class ToneModulator {
   factory ToneModulator() => _instance;
   ToneModulator._internal();
 
-  /// Determine the appropriate tone based on system state
+  /// Determine the appropriate tone based on system state and user context
   SystemTone determineTone({
     required int priorityLevel, // 0-100 (Normal=40, High=60, Critical=90)
     required double reliabilityScore, // 0.0 - 1.0 (from AgentScorecard)
     required bool isDreaming,
+    UserContext? context,
   }) {
+    final user = context ?? UserContext();
+    final temporal = CircadianRhythmTracker().getTemporalContext();
+
     if (isDreaming) return SystemTone.subconscious;
+
+    // Hyper-Personalized Overrides
+    if (user.mood == UserMood.busy) return SystemTone.concise;
+    if (user.mood == UserMood.frustrated) return SystemTone.empathetic;
+
+    // Normalizing for "Efficiency" context (e.g. Monday Morning)
+    if (temporal.contains('Monday') && temporal.contains('Morning')) {
+      if (priorityLevel < 60) return SystemTone.concise;
+    }
 
     // Critical Priority -> Urgent/Sharp
     if (priorityLevel >= 90) return SystemTone.urgent;
@@ -43,6 +59,10 @@ class ToneModulator {
         return '💤 $message';
       case SystemTone.routine:
         return '🟦 $message';
+      case SystemTone.concise:
+        return '📑 $message';
+      case SystemTone.empathetic:
+        return '🕊️ $message';
     }
   }
 
@@ -79,6 +99,18 @@ class ToneModulator {
           prefix: 'SYSTEM',
           icon: '🟦',
         );
+      case SystemTone.concise:
+        return ToneStyle(
+          colorHex: 0xFF90A4AE, // Blue Grey
+          prefix: 'BRIEF',
+          icon: '📑',
+        );
+      case SystemTone.empathetic:
+        return ToneStyle(
+          colorHex: 0xFFF06292, // Pink
+          prefix: 'SUPPORT',
+          icon: '🕊️',
+        );
     }
   }
 }
@@ -89,6 +121,8 @@ enum SystemTone {
   cautionary, // Warning, hesitant (Low confidence)
   celebratory, // Warm, confirming (High success)
   subconscious, // Abstract, floaty (Dreaming)
+  concise, // Very brief (Busy mode)
+  empathetic, // Soothing, supportive (Frustrated mode)
 }
 
 class ToneStyle {
