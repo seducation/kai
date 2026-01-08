@@ -42,6 +42,12 @@ We have successfully implemented a fully "alive" agentic stack:
 *   **Narrative Generator**: Translates complex JSON traces into plain English stories.
     *   *Example*: "I blocked this deletion because the Safety Rule #4 was active and the risk score was too high."
 *   **Explainability Screen**: A "Trust Center" to audit the system's conscience.
+*   **Volitional Speech Gate**: A "motor output" filter that prevents unsolicited chatter. It is **wired simultaneously** to the nervous system (MessageBus) and respects the Rule Engine's **Compliance Profiles**.
+
+### 8. Priority + Rule Engine (PRE) Architecture ⚖️
+*   **Rule Engine**: A deterministic guardrail system (e.g., `SAFE-001` blocks `rm -rf`).
+*   **Task Queue Priority**: Tasks are bucketed into levels (Reflex, Emergency, High, Normal, Maintenance).
+*   **Real-time Enforcement**: The system evaluates every action against the rule set before execution.
 
 ### 7. Experiential Layer (The Dream) 🕶️
 *   **Dreaming Mode**: When idle, JARVIS enters REM sleep to optimize memories and simulate future scenarios.
@@ -55,14 +61,16 @@ We have successfully implemented a fully "alive" agentic stack:
 -   **Orchestrator**: `ControllerAgent`, `PlannerAgent` (Visual Graph).
 -   **Safety**: `RuleEngine`, `ReflexSystem` (Deterministic Guardrails).
 -   **Biology**: `AutonomicSystem`, `CircadianRhythmTracker` (Time Awareness).
--   **Interface**: `DreamStreamScreen`, `WorldMonitorScreen`, `ExplainabilityScreen`.
+-   **Interface**: `DreamStreamScreen`, `WorldMonitorScreen`, `ExplainabilityScreen`, `RulePriorityScreen`.
 
 ## 🚀 Getting Started
 
 1.  **Wake Him Up**: Run the app. The **Autonomic System** starts its heartbeat immediately.
 2.  **Collaborate**: Assign a mission. Watch the **Risk Widget** predict the outcome.
 3.  **Watch Him Sleep**: Stop interacting. After 5 minutes, he enters **Dreaming Mode** to defrag memory.
-4.  **Ask Why**: Check the **Explainability Screen** to understand any blocked actions.
+4.  **Direct Control**: Switch the **Rule Engine Profile** to *Operator Mode* to immediately silence the system and take full manual control.
+5.  **Ask Why**: Check the **Explainability Screen** to understand any blocked actions.
+6.  **Review Guardrails**: Use the **Rules & Priority Engine** to see active safety rules and the pending task distribution.
 
 ---
 

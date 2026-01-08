@@ -2,6 +2,8 @@ import '../core/step_schema.dart';
 import '../core/step_types.dart';
 import '../specialized/systems/tone_modulator.dart';
 import '../specialized/systems/user_context.dart';
+import '../rules/rule_definitions.dart';
+import 'speech_gate.dart';
 
 /// Converts step logs to human-readable text.
 /// The narrator ONLY rephrases logged actions - it NEVER invents steps.
@@ -37,6 +39,20 @@ class NarratorService {
         step.errorMessage != null ? '\n   Error: ${step.errorMessage}' : '';
 
     return '${step.status.icon} Step ${step.stepId}: ${step.agentName} $action "${step.target}" — $status$duration$error';
+  }
+
+  /// Sends a message to the "Speech Organ" if the SpeechGate allows it.
+  Future<void> speak(String message, SpeechIntent intent,
+      {int priority = PriorityLevel.normal}) async {
+    final allowed = SpeechGate().evaluateIntent(intent, priority: priority);
+
+    if (allowed) {
+      // In a real implementation, this would call a TTS service
+      // or emit an event that the UI catches to play audio.
+      print('🔊 SPEECH: $message');
+    } else {
+      // print('🔇 SPEECH BLOCKED: $message');
+    }
   }
 
   /// Narrate all steps

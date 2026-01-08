@@ -5,6 +5,9 @@ import '../core/step_schema.dart';
 import 'permission_types.dart';
 import 'permission_registry.dart';
 import 'audit_log.dart';
+import '../services/narrator_service.dart';
+import '../services/speech_gate.dart';
+import '../rules/rule_definitions.dart';
 
 /// Central enforcement layer for all storage access.
 ///
@@ -93,6 +96,15 @@ class AccessGate {
         'allowed': allowed,
       },
     );
+
+    // Safety Alert: If access is denied, trigger reflex speech
+    if (!allowed) {
+      narrator.speak(
+        'Action blocked: ${action.name.toUpperCase()} access to "$resourcePath" for $requester was denied.',
+        SpeechIntent.safetyAlert,
+        priority: PriorityLevel.reflex,
+      );
+    }
 
     return result;
   }
