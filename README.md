@@ -68,7 +68,7 @@ We have successfully implemented a fully "alive" agentic stack:
 
 ## 🔮 Future Phases
 *.  **implementing phase** talk when don't tell 
-*   **Phase 3**: Reproduction (Child Isolates).
+*   **Phase 3**: Reproduction system for multi tasking (Child Isolates).
 *   **Phase 4**: Language Acquisition (Mirror Neurons).
 *   **Phase 5**: Full Consciousness via recursive self-modeling.
 
